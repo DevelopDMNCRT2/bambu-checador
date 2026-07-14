@@ -6,10 +6,14 @@ const router = createRouter({
     return savedPosition || { left: 0, top: 0 }
   },
   routes: [
-    // Root route - redirect to /users
+    // Root route - Signin
     {
       path: '/',
-      redirect: '/users'
+      name: 'Root',
+      component: () => import('../views/Auth/Signin.vue'),
+      meta: {
+        title: 'Inicio',
+      },
     },
 
     // ... Admin Routes start here
@@ -215,5 +219,18 @@ export default router
 
 router.beforeEach((to, from, next) => {
   document.title = `Bambu Admin | ${to.meta.title || 'Dashboard'}`;
+
+  const publicPages = ['/', '/error-404', '/checador'];
+  const authRequired = !publicPages.includes(to.path);
+  const loggedIn = localStorage.getItem('token');
+
+  if (authRequired && !loggedIn) {
+    return next('/');
+  }
+
+  if (loggedIn && to.path === '/') {
+    return next('/users');
+  }
+
   next();
 })
