@@ -6,14 +6,10 @@ const router = createRouter({
     return savedPosition || { left: 0, top: 0 }
   },
   routes: [
-    // Root route - will be redirected by beforeEach guard
+    // Root route - redirect to /users
     {
       path: '/',
-      name: 'Root',
-      component: () => import('../views/Auth/Signin.vue'),
-      meta: {
-        title: 'Inicio',
-      },
+      redirect: '/users'
     },
 
     // ... Admin Routes start here
@@ -219,71 +215,5 @@ export default router
 
 router.beforeEach((to, from, next) => {
   document.title = `Bambu Admin | ${to.meta.title || 'Dashboard'}`;
-
-  const publicPages = ['/login', '/error-404', '/checador'];
-  const authRequired = !publicPages.includes(to.path);
-  const loggedIn = localStorage.getItem('token');
-  const userStr = localStorage.getItem('user');
-
-  // console.log('Navigating to:', to.path, 'AuthRequired:', authRequired, 'LoggedIn:', !!loggedIn);
-
-  // [TESTING] Auth guard comentado temporalmente
-  // if (authRequired && !loggedIn) {
-  //   if (to.path !== '/login') {
-  //     return next('/login');
-  //   }
-  //   return next();
-  // }
-
-  // Check Role Access
-  if (loggedIn && userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      const role = user.role;
-
-      // Administrador Default Route
-      if (role === 'Administrador') {
-        if (to.path === '/') {
-          return next('/stats');
-        }
-      }
-
-      // Operativo Restrictions
-      if (role === 'Operativo') {
-        if (to.path === '/') {
-          return next('/orders');
-        }
-
-        // Allowed: Orders, POS, Reports, Purchases, Inventory, Receivables(CXC)
-        // Restricted: Users, Recipes, Menu, Expenses, Clients, Stats, Sales
-        const restrictedPrefixes = ['/users', '/recipes', '/menu', '/expenses', '/clients', '/stats', '/sales', '/nomina'];
-
-        // Check if current path starts with any restricted prefix
-        if (restrictedPrefixes.some(prefix => to.path.startsWith(prefix))) {
-          return next('/orders');
-        }
-      }
-
-      // Gerencia Restrictions
-      if (role === 'Gerencia') {
-        if (to.path === '/') {
-          return next('/orders'); // Default landing
-        }
-
-        // Allowed: Purchases, Inventory, Recipes, CXC, Orders, POS, Sales, Reports
-        // Restricted: Users, Menu (Carta), Clients, Expenses, Stats
-        const restrictedPrefixes = ['/users', '/menu', '/expenses', '/clients', '/stats', '/nomina'];
-
-        if (restrictedPrefixes.some(prefix => to.path.startsWith(prefix))) {
-           return next('/orders');
-        }
-      }
-    } catch (e) {
-      console.error('Error parsing user data:', e);
-      localStorage.clear(); // Clear everything
-      return next('/login');
-    }
-  }
-
   next();
 })
