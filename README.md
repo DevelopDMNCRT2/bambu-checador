@@ -1,0 +1,84 @@
+# Bambú Checador 🎋
+
+Sistema seguro de asistencia y control de nómina para el personal de **Bambú**. Este repositorio contiene una arquitectura dividida en dos módulos principales: un panel de administración/nómina para gerencia y un checador público seguro con geolocalización.
+
+---
+
+## 🏗 Arquitectura del Proyecto
+
+El proyecto está dividido en dos carpetas principales:
+
+1. **/admin** (Frontend Administrativo & Checador)
+   - **Tecnologías:** Vue 3, Vite, TailwindCSS, TypeScript.
+   - **Propósito:** Contiene tanto el panel administrativo privado (gestión de empleados, turnos, nómina, reportes y descargas en CSV) como la vista pública del **/checador** (donde los empleados marcan sus entradas y salidas).
+2. **/server** (Backend & API)
+   - **Tecnologías:** Node.js, Express, PostgreSQL (alojado en Neon).
+   - **Propósito:** API que gestiona la base de datos de empleados, registros de asistencia, geolocalización de checado (máximo 200m del restaurante), generación de tokens de enlace para vincular dispositivos, y el planificador automático del corte de nómina.
+
+---
+
+## 🚀 Guía de Inicio Rápido (Local)
+
+Sigue estos pasos para correr el proyecto en tu entorno local.
+
+### 1. Requisitos Previos
+- **Node.js** (v18 o superior).
+- Base de datos **PostgreSQL** (Neon Tech).
+
+### 2. Configuración de Entorno (.env)
+Asegúrate de que las variables de entorno estén configuradas en cada módulo.
+
+**En `/server/.env`:**
+```env
+DATABASE_URL=postgresql://neondb_owner:npg_rVa5LBcR3Ixz@ep-dry-fog-ats3t5hi-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+PORT=3001
+RESTAURANTE_LAT=19.4422797
+RESTAURANTE_LNG=-99.2032339
+```
+
+**En `/admin/.env`:**
+```env
+VITE_API_URL=http://localhost:3001
+```
+
+### 3. Instalación y Ejecución
+
+Abre dos terminales en tu editor y ejecuta los siguientes comandos:
+
+**Terminal 1 (Backend - Server):**
+```bash
+cd server
+npm install
+npm run dev
+```
+*(El servidor correrá en `http://localhost:3001`)*
+
+**Terminal 2 (Frontend - Admin):**
+```bash
+cd admin
+npm install
+npm run dev
+```
+*(El panel administrativo correrá en `http://localhost:5173`)*
+
+---
+
+## 📝 Últimos Cambios y Contexto Actual (Julio 2026)
+
+### 🗓 14 de Julio 2026
+
+- **Control de Empleados (Renombrado y Filtro):**
+  - Se reestructuró el módulo de "Usuarios" a **"Empleados"** en todo el panel (sidebar y títulos).
+  - Se ocultó al usuario administrador de las tablas de empleados para evitar su edición o eliminación.
+  - Se eliminó el rol `Administrador` del selector de roles en la creación y edición de empleados para asegurar que solo exista el admin principal.
+- **Simplificación del Sidebar:**
+  - Se eliminaron todos los módulos ajenos a este proyecto (Caja, POS, Compras, Ventas, etc.). El sidebar ahora contiene exclusivamente accesos directos y limpios a **Empleados** y **Nómina**.
+- **Vinculación Segura de Dispositivos (Checador Móvil):**
+  - Se implementó una interfaz de confirmación al abrir el enlace único del checador. En lugar de registrar el dispositivo automáticamente, el empleado ve una pantalla dedicada con un botón de **"Vincular este Celular"**.
+- **Control de Dispositivos en el Panel (Desvincular y Generar):**
+  - Se agregaron botones de **"Desvincular Celular"** (limpia el token activo del empleado en la base de datos) y **"Link Checador"** (genera un nuevo link de registro) lado a lado dentro del modal de detalles del empleado.
+- **Corte Automático Quincenal:**
+  - Se programó un scheduler en segundo plano (`scheduler.js`) que corre a la 1:00 PM los días 15 y el último día de cada mes para consolidar el reporte de asistencia quincenal de los empleados de forma automática en `server/cortes/`.
+  - Se habilitó la ruta `POST /api/nomina/corte-automatico-trigger` para que el administrador pueda disparar el cálculo manualmente en cualquier momento.
+- **Exportación de Reportes a Excel (CSV):**
+  - Se agregaron botones nativos de descarga CSV en las pestañas de **Asistencia Diaria** y **Corte Quincenal** formateados en UTF-8 con soporte de caracteres especiales y acentos.

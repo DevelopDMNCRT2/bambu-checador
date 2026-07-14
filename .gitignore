@@ -1,0 +1,34 @@
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Variables de entorno (muy importante no subirlas)
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Archivos del sistema
+.DS_Store
+.DS_Store?
+**/Thumbs.db
+Thumbs.db
+
+# Compilaciones
+dist/
+**/dist/
+build/
+**/build/
+
+# Reportes guardados localmente
+server/cortes/corte_*.json
+server/cortes/last_run.txt
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
