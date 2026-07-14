@@ -205,8 +205,8 @@ router.post('/generar-link', async (req, res) => {
     if (!usuarioId) return res.status(400).json({ error: 'Falta usuarioId' });
 
     try {
-        const { v4: uuidv4 } = require('uuid');
-        const token = uuidv4();
+        const crypto = require('crypto');
+        const token = crypto.randomUUID();
 
         await db.query('UPDATE users SET link_token = $1 WHERE id = $2', [token, usuarioId]);
         res.json({ linkToken: token });
