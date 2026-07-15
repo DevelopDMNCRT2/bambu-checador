@@ -898,7 +898,16 @@
             </p>
           </div>
           
-          <div class="mt-6 flex justify-end">
+          <div class="mt-6 flex justify-end gap-3">
+            <button
+              @click="copiarLinkPortapapeles"
+              class="px-5 py-2.5 rounded-xl font-bold bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-white transition-colors text-sm flex items-center gap-1.5"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              Copiar Enlace
+            </button>
             <button
               @click="showLinkModal = false"
               class="px-5 py-2.5 rounded-xl font-bold bg-brand-500 text-white hover:bg-brand-600 transition-colors text-sm"
@@ -984,6 +993,15 @@ const detalleFilterDate = ref('');
 // Modal Link Generado
 const showLinkModal = ref(false);
 const generatedLinkUrl = ref('');
+
+const copiarLinkPortapapeles = async () => {
+    try {
+        await navigator.clipboard.writeText(generatedLinkUrl.value);
+        alert('Enlace copiado al portapapeles con éxito.');
+    } catch (err) {
+        alert('Error al copiar el enlace.');
+    }
+};
 
 // ── Formulario del modal ───────────────────────────────────────────────────────
 const formData = ref({

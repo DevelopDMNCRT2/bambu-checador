@@ -320,6 +320,19 @@ onMounted(() => {
   } else {
     identificarUsuario(deviceToken);
   }
+
+  // Solicitar permiso de ubicación inmediatamente al entrar
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      () => {},
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          errorMsg.value = 'Debes permitir el acceso a la ubicación (GPS) para poder checar.';
+        }
+      },
+      { enableHighAccuracy: true }
+    );
+  }
 });
 
 onUnmounted(() => {
