@@ -363,7 +363,6 @@
         <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700/50 shadow-sm max-w-3xl space-y-6">
           <div>
             <h3 class="text-lg font-bold text-gray-800 dark:text-white">Ubicación del Restaurante</h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Configura las coordenadas geográficas de Bambú y el radio límite de proximidad para el checado de asistencia de los empleados.</p>
           </div>
 
           <div class="border-t border-gray-100 dark:border-gray-700/50"></div>
@@ -393,9 +392,7 @@
                 Procesar
               </button>
             </div>
-            <p class="text-xs text-gray-400 dark:text-gray-500">
-              💡 Puedes pegar un enlace corto compartido desde tu celular o la URL completa desde el navegador de tu computadora. El sistema extraerá automáticamente la latitud y longitud.
-            </p>
+
           </div>
 
           <div class="border-t border-gray-100 dark:border-gray-700/50"></div>
