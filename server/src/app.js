@@ -8,6 +8,7 @@ const nominaRoutes = require('./routes/nomina');
 const horariosSemanalesRoutes = require('./routes/horariosSemanales');
 const horariosExcepcionesRoutes = require('./routes/horariosExcepciones');
 const checadorRoutes = require('./routes/checador');
+const configuracionRoutes = require('./routes/configuracion');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use('/api/nomina', nominaRoutes);
 app.use('/api/horarios-semanales', horariosSemanalesRoutes);
 app.use('/api/horarios-excepciones', horariosExcepcionesRoutes);
 app.use('/api/checador', checadorRoutes);
+app.use('/api/configuracion', configuracionRoutes);
 
 // Health check
 app.use('/health', (req, res) => {

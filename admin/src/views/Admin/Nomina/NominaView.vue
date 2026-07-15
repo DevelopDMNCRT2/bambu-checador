@@ -16,6 +16,12 @@
         >
           Corte Quincenal
         </button>
+        <button
+          @click="activeTab = 'configuracion'"
+          :class="['px-5 py-3 font-semibold text-sm border-b-2 transition-all -mb-px', activeTab === 'configuracion' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400']"
+        >
+          Configuración GPS
+        </button>
       </div>
 
       <!-- ── Tab 1: Diario ── -->
@@ -197,7 +203,7 @@
       </div>
 
       <!-- ── Tab 2: Quincenal ── -->
-      <div v-else class="space-y-5 sm:space-y-6 animate-modal-in">
+      <div v-else-if="activeTab === 'quincenal'" class="space-y-5 sm:space-y-6 animate-modal-in">
         <!-- Selectores -->
         <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm flex flex-col md:flex-row gap-4 items-end">
           <div class="flex-1 min-w-[200px] w-full">
@@ -351,8 +357,116 @@
           Selecciona un empleado y periodo para generar el reporte quincenal.
         </div>
       </div>
-    </div>
 
+      <!-- ── Tab 3: Configuración GPS ── -->
+      <div v-else-if="activeTab === 'configuracion'" class="space-y-6 animate-modal-in">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700/50 shadow-sm max-w-3xl space-y-6">
+          <div>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white">Ubicación del Restaurante</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Configura las coordenadas geográficas de Bambú y el radio límite de proximidad para el checado de asistencia de los empleados.</p>
+          </div>
+
+          <div class="border-t border-gray-100 dark:border-gray-700/50"></div>
+
+          <!-- Link de Google Maps -->
+          <div class="space-y-2">
+            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300">
+              Enlace de Google Maps
+            </label>
+            <div class="flex gap-2">
+              <input
+                type="text"
+                v-model="googleMapsLink"
+                placeholder="Pega el enlace de Google Maps aquí (ej. https://maps.app.goo.gl/... o https://www.google.com/maps/...)"
+                class="flex-1 h-11 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              />
+              <button
+                type="button"
+                @click="procesarEnlaceGoogleMaps"
+                :disabled="loadingLink || !googleMapsLink"
+                class="h-11 px-5 rounded-xl text-sm font-bold bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
+              >
+                <svg v-if="loadingLink" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+                Procesar
+              </button>
+            </div>
+            <p class="text-xs text-gray-400 dark:text-gray-500">
+              💡 Puedes pegar un enlace corto compartido desde tu celular o la URL completa desde el navegador de tu computadora. El sistema extraerá automáticamente la latitud y longitud.
+            </p>
+          </div>
+
+          <div class="border-t border-gray-100 dark:border-gray-700/50"></div>
+
+          <!-- Coordenadas -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">Latitud</label>
+              <input
+                type="number"
+                step="any"
+                v-model.number="configUbicacion.latitud"
+                class="h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">Longitud</label>
+              <input
+                type="number"
+                step="any"
+                v-model.number="configUbicacion.longitud"
+                class="h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">Radio de checado (metros)</label>
+              <input
+                type="number"
+                v-model.number="configUbicacion.radio"
+                class="h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <!-- Mapa / Vista en Google Maps Link -->
+          <div v-if="configUbicacion.latitud && configUbicacion.longitud" class="bg-gray-50 dark:bg-gray-900/30 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Ubicación Actual</span>
+              <span class="text-sm font-semibold text-gray-800 dark:text-white mt-0.5 inline-block">
+                📍 {{ configUbicacion.latitud.toFixed(6) }}, {{ configUbicacion.longitud.toFixed(6) }} (Radio: {{ configUbicacion.radio }}m)
+              </span>
+            </div>
+            <a
+              :href="`https://www.google.com/maps/search/?api=1&query=${configUbicacion.latitud},${configUbicacion.longitud}`"
+              target="_blank"
+              class="text-xs font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 flex items-center gap-1"
+            >
+              Ver en Google Maps
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          </div>
+
+          <div class="flex justify-end pt-4">
+            <button
+              type="button"
+              @click="guardarConfigUbicacion"
+              :disabled="savingConfig || !configUbicacion.latitud || !configUbicacion.longitud || !configUbicacion.radio"
+              class="px-5 py-2.5 rounded-xl text-sm font-bold bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
+            >
+              <svg v-if="savingConfig" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              Guardar Configuración
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
     <!-- ══════════════════════════════════════════════════════════════ -->
     <!-- Modal: Agregar / Editar Nómina                                -->
     <!-- ══════════════════════════════════════════════════════════════ -->
@@ -1041,6 +1155,7 @@ onMounted(async () => {
         console.error('Error cargando usuarios:', err);
     }
     fetchNominas(currentDateString.value);
+    fetchConfigUbicacion();
 });
 
 // ── Acciones de días ──────────────────────────────────────────────────────────
@@ -1307,6 +1422,78 @@ const generarCorte = async () => {
         corteDetalle.value = data.detalle;
     } else {
         alert(data?.error || 'Error al obtener el corte quincenal');
+    }
+};
+
+// ── Configuración GPS ──
+const googleMapsLink = ref('');
+const loadingLink = ref(false);
+const savingConfig = ref(false);
+const configUbicacion = ref({
+    latitud: 19.4422797,
+    longitud: -99.2032339,
+    radio: 200,
+});
+
+const fetchConfigUbicacion = async () => {
+    try {
+        const res = await authFetch('/api/configuracion');
+        if (res.ok) {
+            const data = await res.json();
+            configUbicacion.value = {
+                latitud: data.latitud,
+                longitud: data.longitud,
+                radio: data.radio,
+            };
+        }
+    } catch (err) {
+        console.error('Error fetching config:', err);
+    }
+};
+
+const guardarConfigUbicacion = async () => {
+    savingConfig.value = true;
+    try {
+        const res = await authFetch('/api/configuracion', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(configUbicacion.value),
+        });
+        if (res.ok) {
+            alert('Configuración de ubicación guardada con éxito.');
+        } else {
+            const err = await res.json();
+            alert(err.error || 'Error al guardar configuración');
+        }
+    } catch (err) {
+        alert('Error de conexión al guardar configuración');
+    } finally {
+        savingConfig.value = false;
+    }
+};
+
+const procesarEnlaceGoogleMaps = async () => {
+    if (!googleMapsLink.value) return;
+    loadingLink.value = true;
+    try {
+        const res = await authFetch('/api/configuracion/parse-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: googleMapsLink.value }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            configUbicacion.value.latitud = data.lat;
+            configUbicacion.value.longitud = data.lng;
+            googleMapsLink.value = ''; // limpiar link
+            alert('Coordenadas extraídas con éxito y cargadas en los campos.');
+        } else {
+            alert(data.error || 'Error al procesar el enlace.');
+        }
+    } catch (err) {
+        alert('Error al conectar con el servidor para procesar el enlace.');
+    } finally {
+        loadingLink.value = false;
     }
 };
 

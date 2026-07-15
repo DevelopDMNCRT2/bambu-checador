@@ -91,13 +91,27 @@ router.post('/registro', async (req, res) => {
         }
         const usuarioId = userRes.rows[0].id;
 
-        // Validar ubicación con un radio estricto de 200 metros
+        // Validar ubicación con un radio dinámico desde la base de datos
         if (!latitud || !longitud) {
             return res.status(400).json({ error: 'La ubicación (GPS) es obligatoria para poder checar.' });
         }
-        const distancia = calculateDistance(RESTAURANTE_LAT, RESTAURANTE_LNG, latitud, longitud);
-        if (distancia > 200) {
-            return res.status(403).json({ error: `Estás muy lejos del restaurante. Distancia: ${Math.round(distancia)}m (Límite: 200m).` });
+
+        const configRes = await db.query(
+            "SELECT clave, valor FROM configuracion WHERE clave IN ('restaurante_latitud', 'restaurante_longitud', 'restaurante_radio')"
+        );
+        let restauranteLat = RESTAURANTE_LAT;
+        let restauranteLng = RESTAURANTE_LNG;
+        let restauranteRadio = 200;
+
+        configRes.rows.forEach(r => {
+            if (r.clave === 'restaurante_latitud') restauranteLat = parseFloat(r.valor);
+            if (r.clave === 'restaurante_longitud') restauranteLng = parseFloat(r.valor);
+            if (r.clave === 'restaurante_radio') restauranteRadio = parseFloat(r.valor);
+        });
+
+        const distancia = calculateDistance(restauranteLat, restauranteLng, latitud, longitud);
+        if (distancia > restauranteRadio) {
+            return res.status(403).json({ error: `Estás muy lejos del restaurante. Distancia: ${Math.round(distancia)}m (Límite: ${Math.round(restauranteRadio)}m).` });
         }
 
         // Validar lógica de Entrada/Salida en el día actual
