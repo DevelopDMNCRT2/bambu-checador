@@ -149,6 +149,33 @@ export function useNomina() {
             }
             return { success: true };
         } catch (err: any) {
+            console.error('useNomina.saveHorarioSemanal:', err);
+            return { success: false, error: err.message };
+        }
+    };
+
+    /**
+     * Guarda (reemplaza) excepciones de horario para un rango de fechas.
+     */
+    const saveHorarioExcepcion = async (
+        usuarioId: number,
+        fechaInicio: string,
+        fechaFin: string,
+        dias: DiaSemana[]
+    ) => {
+        try {
+            const res = await authFetch(`/api/horarios-excepciones/${usuarioId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fecha_inicio: fechaInicio, fecha_fin: fechaFin, dias }),
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Error al guardar las excepciones de horario');
+            }
+            return { success: true };
+        } catch (err: any) {
+            console.error('useNomina.saveHorarioExcepcion:', err);
             return { success: false, error: err.message };
         }
     };
@@ -180,6 +207,7 @@ export function useNomina() {
         createNomina,
         getHorarioSemanal,
         saveHorarioSemanal,
+        saveHorarioExcepcion,
         getCorteQuincenal,
     };
 }

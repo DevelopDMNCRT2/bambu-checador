@@ -226,7 +226,7 @@ const handleSubmit = async () => {
             if (data.user.role === 'Operativo') {
                 router.push('/orders');
             } else {
-                router.push('/');
+                router.push('/users');
             }
         } else {
             const err = await response.json();

@@ -365,9 +365,8 @@
           <div class="p-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/30 flex-shrink-0">
             <div>
               <h3 class="text-lg font-bold text-gray-800 dark:text-white">
-                {{ modoEdicion ? 'Editar Nómina' : 'Agregar a Nómina' }}
+                {{ modoEdicion ? 'Editar Horario' : 'Configurar Horario' }}
               </h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Configura el horario semanal del empleado</p>
             </div>
             <button @click="closeModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
               <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -376,13 +375,42 @@
             </button>
           </div>
 
+          <!-- Tabs (Segmented Control) -->
+          <div class="px-6 pt-4 flex-shrink-0">
+            <div class="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+              <button
+                type="button"
+                @click="tipoHorario = 'permanente'"
+                :class="[
+                  'flex-1 py-2 text-sm font-semibold rounded-lg transition-all',
+                  tipoHorario === 'permanente'
+                    ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                ]"
+              >
+                Horario Permanente
+              </button>
+              <button
+                type="button"
+                @click="tipoHorario = 'excepcion'"
+                :class="[
+                  'flex-1 py-2 text-sm font-semibold rounded-lg transition-all',
+                  tipoHorario === 'excepcion'
+                    ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                ]"
+              >
+                Excepción Temporal
+              </button>
+            </div>
+          </div>
+
           <!-- Body -->
           <div class="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
 
             <!-- 1. Usuario -->
             <div>
               <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                <span class="inline-flex items-center justify-center w-5 h-5 bg-brand-500 text-white text-xs rounded-full mr-1.5">1</span>
                 Usuario
               </label>
               <div class="relative">
@@ -408,33 +436,42 @@
               </div>
             </div>
 
-            <!-- 2. Semana de referencia -->
-            <div>
+            <!-- 2. Rango de fechas (Solo excepciones) -->
+            <div v-if="tipoHorario === 'excepcion'">
               <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                <span class="inline-flex items-center justify-center w-5 h-5 bg-brand-500 text-white text-xs rounded-full mr-1.5">2</span>
-                Semana de referencia
+                Rango de fechas de excepción
               </label>
-              <input
-                type="date"
-                v-model="formData.semanaInicio"
-                class="h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-              />
-              <p v-if="semanaDatesLabel" class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
-                📅 {{ semanaDatesLabel }}
-              </p>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Desde</label>
+                  <input
+                    type="date"
+                    v-model="excepcionFechaInicio"
+                    class="h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Hasta</label>
+                  <input
+                    type="date"
+                    v-model="excepcionFechaFin"
+                    class="h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  />
+                </div>
+              </div>
             </div>
 
             <!-- 3. Horario masivo -->
             <div class="bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-700/30 rounded-xl p-4">
               <div class="flex items-center justify-between mb-3">
                 <label class="text-sm font-bold text-brand-700 dark:text-brand-400">
-                  <span class="inline-flex items-center justify-center w-5 h-5 bg-brand-500 text-white text-xs rounded-full mr-1.5">3</span>
                   Aplicar horario a múltiples días
                 </label>
               </div>
               <div class="flex flex-wrap gap-2 mb-3">
                 <button
                   v-for="(dia, idx) in DIAS_SEMANA"
+                  v-show="activeWeekdays.includes(idx)"
                   :key="idx"
                   type="button"
                   @click="toggleBulkDay(idx)"
@@ -471,12 +508,12 @@
             <!-- 4. Configuración por día -->
             <div>
               <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
-                <span class="inline-flex items-center justify-center w-5 h-5 bg-brand-500 text-white text-xs rounded-full mr-1.5">4</span>
                 Configuración por día
               </label>
               <div class="space-y-2">
                 <div
                   v-for="(dia, idx) in diasSemana"
+                  v-show="activeWeekdays.includes(idx)"
                   :key="idx"
                   :class="[
                     'rounded-xl border transition-all overflow-hidden',
@@ -511,9 +548,7 @@
                     <span class="w-10 text-sm font-bold text-gray-700 dark:text-gray-300 flex-shrink-0">
                       {{ DIAS_SEMANA[idx].short }}
                     </span>
-                    <span class="text-xs text-gray-400 dark:text-gray-500 hidden sm:block flex-shrink-0 w-20">
-                      {{ formData.semanaInicio ? getDiaFecha(idx) : '—' }}
-                    </span>
+
 
                     <!-- Horario (solo si activo y laboral) -->
                     <div v-if="dia.activo && dia.tipo === 'laboral'" class="flex items-center gap-2 flex-1">
@@ -806,7 +841,7 @@ const {
     nominas, loading,
     fetchNominas,
     createNomina, updateNominaSemana,
-    getHorarioSemanal, saveHorarioSemanal,
+    getHorarioSemanal, saveHorarioSemanal, saveHorarioExcepcion,
 } = useNomina();
 
 // Instancia separada para el modal de detalles
@@ -823,6 +858,11 @@ const showModal = ref(false);
 const modoEdicion = ref(false);
 const saving = ref(false);
 const loadingHorario = ref(false);
+
+// Nueva pestaña del modal y estados de excepción
+const tipoHorario = ref<'permanente' | 'excepcion'>('permanente');
+const excepcionFechaInicio = ref('');
+const excepcionFechaFin = ref('');
 
 // Modal detalles
 const showDetalleModal = ref(false);
@@ -887,6 +927,45 @@ const resumenDias = computed(() => {
         else inactivos++;
     }
     return { laborales, descanso, inactivos };
+});
+
+const activeWeekdays = computed<number[]>(() => {
+    if (tipoHorario.value === 'permanente') {
+        return [0, 1, 2, 3, 4, 5, 6];
+    }
+    
+    if (!excepcionFechaInicio.value || !excepcionFechaFin.value) {
+        return [0, 1, 2, 3, 4, 5, 6];
+    }
+
+    const start = new Date(excepcionFechaInicio.value + 'T12:00:00');
+    const end = new Date(excepcionFechaFin.value + 'T12:00:00');
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+        return [0, 1, 2, 3, 4, 5, 6];
+    }
+
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays >= 6) {
+        return [0, 1, 2, 3, 4, 5, 6];
+    }
+
+    const included = new Set<number>();
+    const current = new Date(start);
+    while (current <= end) {
+        const dayJS = current.getDay();
+        const dayDB = dayJS === 0 ? 6 : dayJS - 1;
+        included.add(dayDB);
+        current.setDate(current.getDate() + 1);
+    }
+
+    return Array.from(included).sort((a, b) => a - b);
+});
+
+watch(activeWeekdays, (newVal) => {
+    bulkSelectedDays.value = bulkSelectedDays.value.filter(idx => newVal.includes(idx));
 });
 
 // ── Filtros de fecha ──────────────────────────────────────────────────────────
@@ -993,6 +1072,7 @@ const toggleBulkDay = (idx: number) => {
 };
 
 const applyBulkSchedule = () => {
+    resetDias();
     for (const idx of bulkSelectedDays.value) {
         diasSemana.value[idx].tipo = 'laboral';
         diasSemana.value[idx].activo = true;
@@ -1023,6 +1103,9 @@ const estadoLabel = (estado: string): string => ({
 const abrirAgregarNuevo = () => {
     modoEdicion.value = false;
     formData.value = { usuario_id: '', rol: '', semanaInicio: getTodayString() };
+    tipoHorario.value = 'permanente';
+    excepcionFechaInicio.value = '';
+    excepcionFechaFin.value = '';
     resetDias();
     bulkSelectedDays.value = [];
     bulkHoraEntrada.value = '';
@@ -1037,6 +1120,9 @@ const abrirEditar = (empleado: NominaRegistro) => {
         rol: empleado.rol,
         semanaInicio: empleado.fecha ?? getTodayString(),
     };
+    tipoHorario.value = 'excepcion';
+    excepcionFechaInicio.value = empleado.fecha ?? getTodayString();
+    excepcionFechaFin.value = empleado.fecha ?? getTodayString();
     resetDias();
     bulkSelectedDays.value = [];
     bulkHoraEntrada.value = '';
@@ -1112,9 +1198,16 @@ const guardarNomina = async () => {
         alert('Por favor selecciona un usuario');
         return;
     }
-    if (!formData.value.semanaInicio) {
-        alert('Por favor selecciona la semana de referencia');
-        return;
+
+    if (tipoHorario.value === 'excepcion') {
+        if (!excepcionFechaInicio.value || !excepcionFechaFin.value) {
+            alert('Por favor selecciona las fechas de inicio y fin para la excepción');
+            return;
+        }
+        if (excepcionFechaInicio.value > excepcionFechaFin.value) {
+            alert('La fecha de inicio no puede ser posterior a la fecha de fin');
+            return;
+        }
     }
 
     const laborales = diasSemana.value
@@ -1135,7 +1228,7 @@ const guardarNomina = async () => {
 
     saving.value = true;
 
-    // 1. Guardar plantilla de horario semanal
+    // Preparar payload de días
     const diasPayload = diasSemana.value
         .map((d, idx) => ({
             dia_semana: idx,
@@ -1144,36 +1237,25 @@ const guardarNomina = async () => {
             hora_entrada: d.activo && d.tipo === 'laboral' ? d.hora_entrada : null,
             hora_salida:  d.activo && d.tipo === 'laboral' ? d.hora_salida  : null,
         }))
+        .filter(d => activeWeekdays.value.includes(d.dia_semana))
         .filter(d => d.tipo === 'descanso' || (diasSemana.value[d.dia_semana].activo && d.hora_entrada));
 
-    await saveHorarioSemanal(Number(formData.value.usuario_id), diasPayload as any);
+    let res;
+    if (tipoHorario.value === 'permanente') {
+        res = await saveHorarioSemanal(Number(formData.value.usuario_id), diasPayload as any);
+    } else {
+        res = await saveHorarioExcepcion(
+            Number(formData.value.usuario_id),
+            excepcionFechaInicio.value,
+            excepcionFechaFin.value,
+            diasPayload as any
+        );
+    }
 
-    // 2. Registros de nómina por día
-    const nominaRegistros = laborales.map(d => ({
-        usuario_id: Number(formData.value.usuario_id),
-        rol: formData.value.rol || 'N/A',
-        hora_entrada: d.hora_entrada,
-        hora_salida: d.hora_salida,
-        fecha: getDiaFecha(d.idx),
-    }));
-
-    if (nominaRegistros.length > 0) {
-        let res;
-        if (modoEdicion.value) {
-            res = await updateNominaSemana(
-                Number(formData.value.usuario_id),
-                formData.value.rol || 'N/A',
-                nominaRegistros.map(r => ({ fecha: r.fecha, hora_entrada: r.hora_entrada, hora_salida: r.hora_salida }))
-            );
-        } else {
-            res = await createNomina(nominaRegistros);
-        }
-
-        if (!res.success) {
-            alert(res.error);
-            saving.value = false;
-            return;
-        }
+    if (!res.success) {
+        alert(res.error || 'Error al guardar el horario');
+        saving.value = false;
+        return;
     }
 
     saving.value = false;
@@ -1205,12 +1287,14 @@ const generarCorte = async () => {
     corteDetalle.value = [];
 
     const mesStr = String(corteMes.value).padStart(2, '0');
-    let fechaInicio = `${corteAnio.value}-${mesStr}-01`;
+    let fechaInicio = '';
     let fechaFin = '';
 
     if (corteQuincena.value === 1) {
+        fechaInicio = `${corteAnio.value}-${mesStr}-01`;
         fechaFin = `${corteAnio.value}-${mesStr}-15`;
     } else {
+        fechaInicio = `${corteAnio.value}-${mesStr}-16`;
         const ultimoDia = new Date(corteAnio.value, corteMes.value, 0).getDate();
         fechaFin = `${corteAnio.value}-${mesStr}-${ultimoDia}`;
     }

@@ -122,17 +122,34 @@ router.post('/registro', async (req, res) => {
             }
         }
 
-        // Horario Semanal
-        const ahora = new Date(); // Asumimos que el servidor está en la misma zona horaria o usando UTC
+        // Horario (Excepción o Semanal)
+        const ahora = new Date();
         const diaSemanaJS = ahora.getDay();
         const diaSemanaDB = diaSemanaJS === 0 ? 6 : diaSemanaJS - 1; // Ajuste 0=Lun .. 6=Dom
 
-        const horarioRes = await db.query(
-            `SELECT tipo, hora_entrada
-             FROM horarios_semanales
-             WHERE usuario_id = $1 AND dia_semana = $2`,
-            [usuarioId, diaSemanaDB]
-        );
+        const queryActiveHorario = `
+            SELECT tipo, hora_entrada, hora_salida, pagado
+            FROM (
+                -- 1. Buscar en excepciones
+                SELECT tipo, hora_entrada, hora_salida, pagado, 1 as prioridad
+                FROM horarios_excepciones
+                WHERE usuario_id = $1 
+                  AND dia_semana = $2 
+                  AND (NOW() AT TIME ZONE 'America/Mexico_City')::date BETWEEN fecha_inicio AND fecha_fin
+                
+                UNION ALL
+                
+                -- 2. Fallback a plantilla semanal
+                SELECT tipo, hora_entrada, hora_salida, pagado, 2 as prioridad
+                FROM horarios_semanales
+                WHERE usuario_id = $1 
+                  AND dia_semana = $2
+            ) AS active_schedules
+            ORDER BY prioridad ASC
+            LIMIT 1
+        `;
+
+        const horarioRes = await db.query(queryActiveHorario, [usuarioId, diaSemanaDB]);
 
         if (!horarioRes.rows.length) {
             return res.status(403).json({ error: 'No tienes turno programado para hoy. Contacta a gerencia.' });

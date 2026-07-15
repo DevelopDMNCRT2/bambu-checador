@@ -11,6 +11,56 @@ router.get('/', async (req, res) => {
     }
 
     try {
+        // Auto-generación de registros de nómina basados en horarios activos (excepciones o plantillas)
+        const { rows: users } = await db.query(
+            "SELECT id, role FROM users WHERE role != 'Administrador' AND deleted_at IS NULL"
+        );
+
+        const d = new Date(fecha + 'T12:00:00');
+        const dayOfWeekJS = d.getDay();
+        const diaSemanaDB = dayOfWeekJS === 0 ? 6 : dayOfWeekJS - 1;
+
+        for (const user of users) {
+            const { rows: existing } = await db.query(
+                `SELECT id FROM nomina WHERE usuario_id = $1 AND fecha = $2`,
+                [user.id, fecha]
+            );
+
+            if (existing.length === 0) {
+                const schedRes = await db.query(`
+                    SELECT tipo, hora_entrada, hora_salida
+                    FROM (
+                        SELECT tipo, hora_entrada, hora_salida, 1 as prioridad
+                        FROM horarios_excepciones
+                        WHERE usuario_id = $1 
+                          AND dia_semana = $2 
+                          AND $3 BETWEEN fecha_inicio AND fecha_fin
+                        
+                        UNION ALL
+                        
+                        SELECT tipo, hora_entrada, hora_salida, 2 as prioridad
+                        FROM horarios_semanales
+                        WHERE usuario_id = $1 
+                          AND dia_semana = $2
+                    ) AS active_schedules
+                    ORDER BY prioridad ASC
+                    LIMIT 1
+                `, [user.id, diaSemanaDB, fecha]);
+
+                if (schedRes.rows.length > 0) {
+                    const sched = schedRes.rows[0];
+                    if (sched.tipo === 'laboral' && sched.hora_entrada && sched.hora_salida) {
+                        await db.query(
+                            `INSERT INTO nomina (usuario_id, rol, hora_entrada, hora_salida, fecha)
+                             VALUES ($1, $2, $3, $4, $5)
+                             ON CONFLICT (usuario_id, fecha) DO NOTHING`,
+                            [user.id, user.role || 'N/A', sched.hora_entrada, sched.hora_salida, fecha]
+                        );
+                    }
+                }
+            }
+        }
+
         // Nota: Obtenemos hora_real_entrada y hora_real_salida dinámicamente de asistencias
         const query = `
             SELECT
@@ -211,79 +261,162 @@ router.get('/corte-quincenal', async (req, res) => {
     }
 
     try {
-        const query = `
-            SELECT
-                n.id,
-                n.usuario_id,
-                u.name AS usuario,
-                n.rol,
-                TO_CHAR(n.hora_entrada, 'HH24:MI') as hora_entrada,
-                TO_CHAR(n.hora_salida,  'HH24:MI') as hora_salida,
-                TO_CHAR(n.fecha, 'YYYY-MM-DD')     as fecha,
-                (SELECT MIN(created_at) FROM asistencias WHERE usuario_id = n.usuario_id AND tipo = 'Entrada' AND DATE(created_at) = n.fecha) as hora_real_entrada,
-                (SELECT MAX(created_at) FROM asistencias WHERE usuario_id = n.usuario_id AND tipo = 'Salida' AND DATE(created_at) = n.fecha) as hora_real_salida
-            FROM nomina n
-            JOIN users u ON n.usuario_id = u.id
-            WHERE n.usuario_id = $1
-              AND n.fecha BETWEEN $2 AND $3
-              AND u.deleted_at IS NULL
-            ORDER BY n.fecha ASC
-        `;
-        const { rows } = await db.query(query, [usuario_id, fecha_inicio, fecha_fin]);
+        const [semRes, exRes, nomRes, asisRes] = await Promise.all([
+            db.query(`SELECT dia_semana, tipo, hora_entrada, hora_salida FROM horarios_semanales WHERE usuario_id = $1`, [usuario_id]),
+            db.query(`SELECT fecha_inicio, fecha_fin, dia_semana, tipo, hora_entrada, hora_salida FROM horarios_excepciones WHERE usuario_id = $1 AND NOT (fecha_fin < $2 OR fecha_inicio > $3)`, [usuario_id, fecha_inicio, fecha_fin]),
+            db.query(`SELECT id, rol, TO_CHAR(hora_entrada, 'HH24:MI') as hora_entrada, TO_CHAR(hora_salida, 'HH24:MI') as hora_salida, TO_CHAR(fecha, 'YYYY-MM-DD') as fecha FROM nomina WHERE usuario_id = $1 AND fecha BETWEEN $2 AND $3`, [usuario_id, fecha_inicio, fecha_fin]),
+            db.query(`SELECT tipo, created_at, TO_CHAR(created_at, 'YYYY-MM-DD') as fecha FROM asistencias WHERE usuario_id = $1 AND DATE(created_at) BETWEEN $2 AND $3 ORDER BY created_at ASC`, [usuario_id, fecha_inicio, fecha_fin])
+        ]);
 
+        const userRes = await db.query('SELECT role, name FROM users WHERE id = $1', [usuario_id]);
+        if (userRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        const user = userRes.rows[0];
+
+        const horariosSemanalesMap = {};
+        semRes.rows.forEach(r => {
+            horariosSemanalesMap[r.dia_semana] = r;
+        });
+
+        const exceptions = exRes.rows;
+
+        const nominaMap = {};
+        nomRes.rows.forEach(r => {
+            nominaMap[r.fecha] = r;
+        });
+
+        const asistenciasMap = {};
+        asisRes.rows.forEach(r => {
+            if (!asistenciasMap[r.fecha]) {
+                asistenciasMap[r.fecha] = { entradas: [], salidas: [] };
+            }
+            if (r.tipo === 'Entrada') {
+                asistenciasMap[r.fecha].entradas.push(r.created_at);
+            } else if (r.tipo === 'Salida') {
+                asistenciasMap[r.fecha].salidas.push(r.created_at);
+            }
+        });
+
+        const result = [];
+        const pad = (n) => String(n).padStart(2, '0');
+        let curr = new Date(fecha_inicio + 'T12:00:00');
+        const end = new Date(fecha_fin + 'T12:00:00');
         const now = new Date();
 
-        const result = rows.map(row => {
+        while (curr <= end) {
+            const y = curr.getFullYear();
+            const m = pad(curr.getMonth() + 1);
+            const d = pad(curr.getDate());
+            const dateStr = `${y}-${m}-${d}`;
+
+            const dayJS = curr.getDay(); // 0 = Sun, 1 = Mon...
+            const diaSemanaDB = dayJS === 0 ? 6 : dayJS - 1;
+
+            // 1. Resolver el horario de este día
+            // Primero buscar excepciones
+            let activeSched = null;
+            const activeEx = exceptions.find(ex => {
+                const start = new Date(ex.fecha_inicio);
+                const endEx = new Date(ex.fecha_fin);
+                start.setHours(0,0,0,0);
+                endEx.setHours(23,59,59,999);
+                return curr >= start && curr <= endEx && ex.dia_semana === diaSemanaDB;
+            });
+
+            if (activeEx) {
+                activeSched = {
+                    tipo: activeEx.tipo,
+                    hora_entrada: activeEx.hora_entrada,
+                    hora_salida: activeEx.hora_salida
+                };
+            } else {
+                activeSched = horariosSemanalesMap[diaSemanaDB] || { tipo: 'descanso', hora_entrada: null, hora_salida: null };
+            }
+
+            // Si es descanso, lo excluimos completamente de la nómina
+            if (activeSched.tipo === 'descanso') {
+                curr.setDate(curr.getDate() + 1);
+                continue;
+            }
+
+            // 2. Obtener datos de nómina/asistencias
+            const nominaRow = nominaMap[dateStr];
+            const asisRow = asistenciasMap[dateStr] || { entradas: [], salidas: [] };
+
+            const finalRol = nominaRow ? nominaRow.rol : (user.role || 'N/A');
+            let finalHoraEntrada = '';
+            let finalHoraSalida = '';
+
+            if (nominaRow) {
+                finalHoraEntrada = nominaRow.hora_entrada;
+                finalHoraSalida = nominaRow.hora_salida;
+            } else {
+                finalHoraEntrada = activeSched.hora_entrada ? activeSched.hora_entrada.slice(0, 5) : '';
+                finalHoraSalida = activeSched.hora_salida ? activeSched.hora_salida.slice(0, 5) : '';
+            }
+
+            const horaRealEntradaRaw = asisRow.entradas.length > 0 ? asisRow.entradas[0] : null;
+            const horaRealSalidaRaw = asisRow.salidas.length > 0 ? asisRow.salidas[asisRow.salidas.length - 1] : null;
+
+            // Calcular estado
             let estado = 'pendiente';
             let horaExacta = null;
             let horaExactaSalida = null;
 
-            const horaEntradaDate = new Date(`${row.fecha}T${row.hora_entrada}:00`);
-
-            // Ventanas de tiempo
-            const ventanaPuntualMin = new Date(horaEntradaDate.getTime() -  15 * 60000);
-            const ventanaPuntualMax = new Date(horaEntradaDate.getTime() +  20 * 60000);
-            const ventanaRetardoMax = new Date(horaEntradaDate.getTime() +  40 * 60000);
-            const ventanaFalta      = new Date(horaEntradaDate.getTime() +   2 * 3600000);
-
-            if (row.hora_real_salida) {
-                const horaRealS = new Date(row.hora_real_salida);
+            if (horaRealSalidaRaw) {
+                const horaRealS = new Date(horaRealSalidaRaw);
                 horaExactaSalida = horaRealS.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
             }
 
-            if (row.hora_real_entrada) {
-                const horaReal = new Date(row.hora_real_entrada);
-                horaExacta = horaReal.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+            if (finalHoraEntrada) {
+                const horaEntradaDate = new Date(`${dateStr}T${finalHoraEntrada}:00`);
+                const ventanaPuntualMin = new Date(horaEntradaDate.getTime() -  15 * 60000);
+                const ventanaPuntualMax = new Date(horaEntradaDate.getTime() +  20 * 60000);
+                const ventanaRetardoMax = new Date(horaEntradaDate.getTime() +  40 * 60000);
+                const ventanaFalta      = new Date(horaEntradaDate.getTime() +   2 * 3600000);
 
-                if (horaReal >= ventanaPuntualMin && horaReal <= ventanaPuntualMax) {
-                    estado = 'puntual';
-                } else if (horaReal > ventanaPuntualMax && horaReal <= ventanaRetardoMax) {
-                    estado = 'retardo';
-                } else if (horaReal > ventanaRetardoMax) {
-                    estado = 'regreso';
+                if (horaRealEntradaRaw) {
+                    const horaReal = new Date(horaRealEntradaRaw);
+                    horaExacta = horaReal.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+                    if (horaReal >= ventanaPuntualMin && horaReal <= ventanaPuntualMax) {
+                        estado = 'puntual';
+                    } else if (horaReal > ventanaPuntualMax && horaReal <= ventanaRetardoMax) {
+                        estado = 'retardo';
+                    } else if (horaReal > ventanaRetardoMax) {
+                        estado = 'regreso';
+                    } else {
+                        estado = 'puntual';
+                    }
                 } else {
-                    estado = 'puntual';
-                }
-            } else {
-                if (now >= ventanaFalta) {
-                    estado = 'falta';
-                } else {
-                    estado = 'pendiente';
+                    if (now >= ventanaFalta) {
+                        estado = 'falta';
+                    } else {
+                        estado = 'pendiente';
+                    }
                 }
             }
 
-            return {
-                ...row,
+            result.push({
+                id: nominaRow ? nominaRow.id : null,
+                usuario_id: Number(usuario_id),
+                usuario: user.name,
+                rol: finalRol,
+                hora_entrada: finalHoraEntrada,
+                hora_salida: finalHoraSalida,
+                fecha: dateStr,
                 estadoChecado: estado,
                 horaExacta,
                 horaExactaSalida,
-            };
-        });
+            });
 
-        // Calcular resumen: Entradas, Salidas, Días Trabajados, Retardos, Faltas
+            curr.setDate(curr.getDate() + 1);
+        }
+
         const resumen = {
-            entradas: result.filter(r => r.hora_real_entrada !== null).length,
-            salidas: result.filter(r => r.hora_real_salida !== null).length,
+            entradas: result.filter(r => r.horaExacta !== null).length,
+            salidas: result.filter(r => r.horaExactaSalida !== null).length,
             dias_trabajados: result.filter(r => ['puntual', 'retardo', 'regreso'].includes(r.estadoChecado)).length,
             retardos: result.filter(r => r.estadoChecado === 'retardo').length,
             faltas: result.filter(r => r.estadoChecado === 'falta').length,

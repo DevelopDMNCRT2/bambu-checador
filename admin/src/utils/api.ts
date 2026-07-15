@@ -5,6 +5,9 @@ export async function authFetch(endpoint: string, options: RequestInit = {}) {
     
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Expires': '0',
         ...options.headers,
     };
 
@@ -15,6 +18,7 @@ export async function authFetch(endpoint: string, options: RequestInit = {}) {
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
     
     const response = await fetch(url, {
+        cache: 'no-store',
         ...options,
         headers
     });

@@ -6,6 +6,7 @@ const publicRoutes = require('./routes/public');
 const protectedRoutes = require('./routes/private');
 const nominaRoutes = require('./routes/nomina');
 const horariosSemanalesRoutes = require('./routes/horariosSemanales');
+const horariosExcepcionesRoutes = require('./routes/horariosExcepciones');
 const checadorRoutes = require('./routes/checador');
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/cxc', require('./routes/cxc'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/nomina', nominaRoutes);
 app.use('/api/horarios-semanales', horariosSemanalesRoutes);
+app.use('/api/horarios-excepciones', horariosExcepcionesRoutes);
 app.use('/api/checador', checadorRoutes);
 
 // Health check

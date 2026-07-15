@@ -82,3 +82,16 @@ npm run dev
   - Se habilitó la ruta `POST /api/nomina/corte-automatico-trigger` para que el administrador pueda disparar el cálculo manualmente en cualquier momento.
 - **Exportación de Reportes a Excel (CSV):**
   - Se agregaron botones nativos de descarga CSV en las pestañas de **Asistencia Diaria** y **Corte Quincenal** formateados en UTF-8 con soporte de caracteres especiales y acentos.
+
+### 🗓 15 de Julio 2026
+
+- **Gestión Avanzada de Horarios (Plantillas Permanentes y Excepciones):**
+  - Se dividió la gestión de horarios en el panel en **Horario Permanente** (plantilla semanal base que se repite indefinidamente) y **Excepción Temporal** (rango de fechas flexible, ej. vacaciones, incapacidades o turnos especiales).
+  - Al seleccionar un rango de excepción en el modal, el selector de días masivo y el listado de días se filtran dinámicamente en tiempo real para mostrar **únicamente** los días de la semana incluidos en dicho rango.
+  - Se ajustó el selector masivo de horarios para que sobrescriba y limpie los días no seleccionados en el lote actual, asegurando una asignación precisa.
+  - Se eliminaron las etiquetas numeradas de secciones en el modal y la visualización de fechas específicas junto a los días de la semana cuando se define la plantilla base, mejorando la estética y claridad.
+- **Auto-generación Inteligente en Nómina Diaria:**
+  - El backend ahora genera automáticamente las jornadas diarias pendientes conforme el administrador visualiza la nómina de cualquier fecha en el calendario. Resuelve prioridades automáticamente: primero excepciones de rango y luego plantilla permanente base.
+- **Reporte Quincenal Dinámico y Depurado:**
+  - Se reestructuró el endpoint de generación de corte quincenal en el backend. Ahora realiza una resolución temporal día por día, omitiendo los días de descanso y mostrando únicamente las jornadas laborales programadas (más las excepciones temporales activas).
+  - Se corrigió un bug en el cálculo del rango de la segunda quincena en el panel administrativo, asegurando que inicie estrictamente a partir del día 16 de cada mes.
