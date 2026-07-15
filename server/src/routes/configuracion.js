@@ -4,17 +4,30 @@ const db = require('../config/db');
 
 // Helper to extract lat/lng from any Google Maps URL
 function extractCoordsFromUrl(url) {
+    // 1. Check for @lat,lng
     const atMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
     if (atMatch) {
         return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
     }
+    // 2. Check for /search/lat,lng (sometimes with a '+' or '+-' sign before lng)
+    const searchMatch = url.match(/\/search\/(-?\d+\.\d+),\+?(-?\d+\.\d+)/);
+    if (searchMatch) {
+        return { lat: parseFloat(searchMatch[1]), lng: parseFloat(searchMatch[2]) };
+    }
+    // 3. Check for q=lat,lng
     const qMatch = url.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
     if (qMatch) {
         return { lat: parseFloat(qMatch[1]), lng: parseFloat(qMatch[2]) };
     }
+    // 4. Check for ll=lat,lng
     const llMatch = url.match(/[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/);
     if (llMatch) {
         return { lat: parseFloat(llMatch[1]), lng: parseFloat(llMatch[2]) };
+    }
+    // 5. General check for any format: /decimal,decimal (e.g. /19.4422797,-99.2032339)
+    const generalMatch = url.match(/\/(-?\d+\.\d+),\+?(-?\d+\.\d+)/);
+    if (generalMatch) {
+        return { lat: parseFloat(generalMatch[1]), lng: parseFloat(generalMatch[2]) };
     }
     return null;
 }
