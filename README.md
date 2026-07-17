@@ -95,3 +95,15 @@ npm run dev
 - **Reporte Quincenal Dinámico y Depurado:**
   - Se reestructuró el endpoint de generación de corte quincenal en el backend. Ahora realiza una resolución temporal día por día, omitiendo los días de descanso y mostrando únicamente las jornadas laborales programadas (más las excepciones temporales activas).
   - Se corrigió un bug en el cálculo del rango de la segunda quincena en el panel administrativo, asegurando que inicie estrictamente a partir del día 16 de cada mes.
+
+### 🗓 17 de Julio 2026
+
+- **Excepciones de Horario por Fecha Detalladas:**
+  - Se implementó la opción de programar excepciones en modo **"Individual (por fecha específica)"** dentro de un rango de fechas, permitiendo configurar detalladamente el horario o descanso día por día del calendario.
+  - **Sincronización de Pestañas:** Al cambiar de la pestaña "Repetitivo" a la pestaña "Individual" en el modal de horario, el sistema copia automáticamente la configuración definida en la pestaña repetitiva a todos los días individuales para facilitar una edición rápida sobre un patrón general.
+  - **Pre-carga al Editar:** Al dar clic en editar un registro de nómina diario, el formulario se inicializa automáticamente con la hora y estado de la fila seleccionada, facilitando modificaciones directas.
+- **Control de Tolerancia y Horas Extras en la Salida:**
+  - Se implementó una ventana de tolerancia de **30 minutos** posteriores al fin de la jornada teórica.
+  - **Estado "Salida NO Checada":** Si un empleado marca entrada pero no registra su salida pasados los 30 minutos de tolerancia, su estado cambia automáticamente a "Salida NO Checada" (en rojo).
+  - **Estado "Horas Extras":** Si el empleado registra su salida después del periodo de tolerancia de 30 minutos, su estado cambia a "Horas Extras" (en morado) y se calcula de forma dinámica el tiempo extra trabajado (ej. `+2h 15m`).
+  - **Resolución de Bug de Zona Horaria (UTC) en Asistencias:** Se corrigieron las consultas de agrupación de asistencias de `DATE(created_at)` a `(created_at AT TIME ZONE 'America/Mexico_City')::date` para evitar que los registros realizados después de las 6:00 PM (hora local de México) se interpreten como del día siguiente (UTC), solucionando el problema de registros perdidos.

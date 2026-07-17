@@ -9,9 +9,10 @@ export interface NominaRegistro {
     hora_entrada: string;
     hora_salida: string;
     fecha: string;
-    estadoChecado: 'pendiente' | 'puntual' | 'retardo' | 'regreso' | 'falta';
+    estadoChecado: 'pendiente' | 'puntual' | 'retardo' | 'regreso' | 'falta' | 'sin_salida' | 'horas_extras';
     horaExacta: string | null;
     horaExactaSalida: string | null;
+    horas_extras_mins?: number;
 }
 
 export interface NominaSemanaRegistro {
@@ -161,13 +162,15 @@ export function useNomina() {
         usuarioId: number,
         fechaInicio: string,
         fechaFin: string,
-        dias: DiaSemana[]
+        dias: DiaSemana[],
+        modo: 'repetitivo' | 'individual' = 'repetitivo',
+        excepciones: any[] = []
     ) => {
         try {
             const res = await authFetch(`/api/horarios-excepciones/${usuarioId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fecha_inicio: fechaInicio, fecha_fin: fechaFin, dias }),
+                body: JSON.stringify({ fecha_inicio: fechaInicio, fecha_fin: fechaFin, dias, modo, excepciones }),
             });
             if (!res.ok) {
                 const err = await res.json();

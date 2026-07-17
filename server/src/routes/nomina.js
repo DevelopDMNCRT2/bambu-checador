@@ -71,8 +71,8 @@ router.get('/', async (req, res) => {
                 TO_CHAR(n.hora_entrada, 'HH24:MI') as hora_entrada,
                 TO_CHAR(n.hora_salida,  'HH24:MI') as hora_salida,
                 TO_CHAR(n.fecha, 'YYYY-MM-DD')     as fecha,
-                (SELECT MIN(created_at) FROM asistencias WHERE usuario_id = n.usuario_id AND tipo = 'Entrada' AND DATE(created_at) = n.fecha) as hora_real_entrada,
-                (SELECT MAX(created_at) FROM asistencias WHERE usuario_id = n.usuario_id AND tipo = 'Salida' AND DATE(created_at) = n.fecha) as hora_real_salida
+                (SELECT MIN(created_at) FROM asistencias WHERE usuario_id = n.usuario_id AND tipo = 'Entrada' AND (created_at AT TIME ZONE 'America/Mexico_City')::date = n.fecha) as hora_real_entrada,
+                (SELECT MAX(created_at) FROM asistencias WHERE usuario_id = n.usuario_id AND tipo = 'Salida' AND (created_at AT TIME ZONE 'America/Mexico_City')::date = n.fecha) as hora_real_salida
             FROM nomina n
             JOIN users u ON n.usuario_id = u.id
             WHERE TO_CHAR(n.fecha, 'YYYY-MM-DD') = $1
@@ -87,14 +87,17 @@ router.get('/', async (req, res) => {
             let estado = 'pendiente';
             let horaExacta = null;
             let horaExactaSalida = null;
+            let horas_extras_mins = 0;
 
             const horaEntradaDate = new Date(`${fecha}T${row.hora_entrada}:00`);
+            const horaSalidaDate = new Date(`${fecha}T${row.hora_salida}:00`);
 
             // Ventanas de tiempo actualizadas
             const ventanaPuntualMin = new Date(horaEntradaDate.getTime() -  15 * 60000); // -15 min (puede checar temprano)
             const ventanaPuntualMax = new Date(horaEntradaDate.getTime() +  20 * 60000); // +20 min (puntual hasta el min 20)
             const ventanaRetardoMax = new Date(horaEntradaDate.getTime() +  40 * 60000); // +40 min (retardo entre 20 y 40 min)
             const ventanaFalta      = new Date(horaEntradaDate.getTime() +   2 * 3600000); // +2 h (si no checa)
+            const ventanaSalidaMax  = new Date(horaSalidaDate.getTime() +   30 * 60000); // +30 min tolerancia de salida
 
             if (row.hora_real_salida) {
                 const horaRealS = new Date(row.hora_real_salida);
@@ -114,6 +117,20 @@ router.get('/', async (req, res) => {
                 } else {
                     estado = 'puntual'; // llegó antes de la ventana (válido porque el checador restringe -15 min máximo)
                 }
+
+                // Evaluar salida
+                if (row.hora_real_salida) {
+                    const horaRealS = new Date(row.hora_real_salida);
+                    if (horaRealS > ventanaSalidaMax) {
+                        estado = 'horas_extras';
+                        const diffMins = Math.round((horaRealS.getTime() - horaSalidaDate.getTime()) / 60000);
+                        horas_extras_mins = diffMins > 0 ? diffMins : 0;
+                    }
+                } else {
+                    if (now > ventanaSalidaMax) {
+                        estado = 'sin_salida';
+                    }
+                }
             } else {
                 // No ha checado
                 if (now >= ventanaFalta) {
@@ -128,6 +145,7 @@ router.get('/', async (req, res) => {
                 estadoChecado: estado,
                 horaExacta,
                 horaExactaSalida,
+                horas_extras_mins,
             };
         });
 
@@ -265,7 +283,7 @@ router.get('/corte-quincenal', async (req, res) => {
             db.query(`SELECT dia_semana, tipo, hora_entrada, hora_salida FROM horarios_semanales WHERE usuario_id = $1`, [usuario_id]),
             db.query(`SELECT fecha_inicio, fecha_fin, dia_semana, tipo, hora_entrada, hora_salida FROM horarios_excepciones WHERE usuario_id = $1 AND NOT (fecha_fin < $2 OR fecha_inicio > $3)`, [usuario_id, fecha_inicio, fecha_fin]),
             db.query(`SELECT id, rol, TO_CHAR(hora_entrada, 'HH24:MI') as hora_entrada, TO_CHAR(hora_salida, 'HH24:MI') as hora_salida, TO_CHAR(fecha, 'YYYY-MM-DD') as fecha FROM nomina WHERE usuario_id = $1 AND fecha BETWEEN $2 AND $3`, [usuario_id, fecha_inicio, fecha_fin]),
-            db.query(`SELECT tipo, created_at, TO_CHAR(created_at, 'YYYY-MM-DD') as fecha FROM asistencias WHERE usuario_id = $1 AND DATE(created_at) BETWEEN $2 AND $3 ORDER BY created_at ASC`, [usuario_id, fecha_inicio, fecha_fin])
+            db.query(`SELECT tipo, created_at, TO_CHAR(created_at AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD') as fecha FROM asistencias WHERE usuario_id = $1 AND (created_at AT TIME ZONE 'America/Mexico_City')::date BETWEEN $2 AND $3 ORDER BY created_at ASC`, [usuario_id, fecha_inicio, fecha_fin])
         ]);
 
         const userRes = await db.query('SELECT role, name FROM users WHERE id = $1', [usuario_id]);
@@ -363,6 +381,7 @@ router.get('/corte-quincenal', async (req, res) => {
             let estado = 'pendiente';
             let horaExacta = null;
             let horaExactaSalida = null;
+            let horas_extras_mins = 0;
 
             if (horaRealSalidaRaw) {
                 const horaRealS = new Date(horaRealSalidaRaw);
@@ -371,10 +390,13 @@ router.get('/corte-quincenal', async (req, res) => {
 
             if (finalHoraEntrada) {
                 const horaEntradaDate = new Date(`${dateStr}T${finalHoraEntrada}:00`);
+                const horaSalidaDate = new Date(`${dateStr}T${finalHoraSalida}:00`);
+
                 const ventanaPuntualMin = new Date(horaEntradaDate.getTime() -  15 * 60000);
                 const ventanaPuntualMax = new Date(horaEntradaDate.getTime() +  20 * 60000);
                 const ventanaRetardoMax = new Date(horaEntradaDate.getTime() +  40 * 60000);
                 const ventanaFalta      = new Date(horaEntradaDate.getTime() +   2 * 3600000);
+                const ventanaSalidaMax  = new Date(horaSalidaDate.getTime() +   30 * 60000);
 
                 if (horaRealEntradaRaw) {
                     const horaReal = new Date(horaRealEntradaRaw);
@@ -388,6 +410,20 @@ router.get('/corte-quincenal', async (req, res) => {
                         estado = 'regreso';
                     } else {
                         estado = 'puntual';
+                    }
+
+                    // Evaluar salida
+                    if (horaRealSalidaRaw) {
+                        const horaRealS = new Date(horaRealSalidaRaw);
+                        if (horaRealS > ventanaSalidaMax) {
+                            estado = 'horas_extras';
+                            const diffMins = Math.round((horaRealS.getTime() - horaSalidaDate.getTime()) / 60000);
+                            horas_extras_mins = diffMins > 0 ? diffMins : 0;
+                        }
+                    } else {
+                        if (now > ventanaSalidaMax) {
+                            estado = 'sin_salida';
+                        }
                     }
                 } else {
                     if (now >= ventanaFalta) {
@@ -409,6 +445,7 @@ router.get('/corte-quincenal', async (req, res) => {
                 estadoChecado: estado,
                 horaExacta,
                 horaExactaSalida,
+                horas_extras_mins,
             });
 
             curr.setDate(curr.getDate() + 1);
@@ -417,7 +454,7 @@ router.get('/corte-quincenal', async (req, res) => {
         const resumen = {
             entradas: result.filter(r => r.horaExacta !== null).length,
             salidas: result.filter(r => r.horaExactaSalida !== null).length,
-            dias_trabajados: result.filter(r => ['puntual', 'retardo', 'regreso'].includes(r.estadoChecado)).length,
+            dias_trabajados: result.filter(r => ['puntual', 'retardo', 'regreso', 'horas_extras', 'sin_salida'].includes(r.estadoChecado)).length,
             retardos: result.filter(r => r.estadoChecado === 'retardo').length,
             faltas: result.filter(r => r.estadoChecado === 'falta').length,
         };

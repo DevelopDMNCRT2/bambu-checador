@@ -166,8 +166,11 @@
                         <span v-if="empleado.horaExacta" class="text-xs text-gray-500 font-medium whitespace-nowrap bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded" title="Hora de entrada">
                           Ent: {{ empleado.horaExacta }}
                         </span>
-                        <span v-if="empleado.horaExactaSalida" class="text-xs text-gray-500 font-medium whitespace-nowrap bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded" title="Hora de salida">
-                          Sal: {{ empleado.horaExactaSalida }}
+                        <span v-if="empleado.horaExactaSalida" class="text-xs text-gray-500 font-medium whitespace-nowrap bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded flex items-center gap-1" title="Hora de salida">
+                          <span>Sal: {{ empleado.horaExactaSalida }}</span>
+                          <span v-if="empleado.horas_extras_mins && empleado.horas_extras_mins > 0" class="text-[10px] font-bold text-purple-600 dark:text-purple-400">
+                            (+{{ formatMinutos(empleado.horas_extras_mins) }})
+                          </span>
                         </span>
                       </div>
                     </div>
@@ -340,7 +343,12 @@
                     <td class="px-5 py-4 font-mono font-medium text-gray-800 dark:text-white">{{ r.fecha.split('-').reverse().join('/') }}</td>
                     <td class="px-5 py-4 text-gray-600 dark:text-gray-300 font-medium">{{ r.hora_entrada }} – {{ r.hora_salida }}</td>
                     <td class="px-5 py-4 font-mono text-gray-500 dark:text-gray-400">{{ r.horaExacta || '—' }}</td>
-                    <td class="px-5 py-4 font-mono text-gray-500 dark:text-gray-400">{{ r.horaExactaSalida || '—' }}</td>
+                    <td class="px-5 py-4 font-mono text-gray-500 dark:text-gray-400">
+                      {{ r.horaExactaSalida || '—' }}
+                      <span v-if="r.horas_extras_mins && r.horas_extras_mins > 0" class="text-xs font-bold text-purple-600 dark:text-purple-400 ml-1">
+                        (+{{ formatMinutos(r.horas_extras_mins) }})
+                      </span>
+                    </td>
                     <td class="px-5 py-4 text-center">
                       <span class="inline-flex px-2 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider" :class="estadoBadgeClass(r.estadoChecado)">
                         {{ estadoLabel(r.estadoChecado) }}
@@ -548,32 +556,67 @@
             </div>
 
             <!-- 2. Rango de fechas (Solo excepciones) -->
-            <div v-if="tipoHorario === 'excepcion'">
-              <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Rango de fechas de excepción
-              </label>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Desde</label>
-                  <input
-                    type="date"
-                    v-model="excepcionFechaInicio"
-                    class="h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                  />
+            <div v-if="tipoHorario === 'excepcion'" class="space-y-4">
+              <div>
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Rango de fechas de excepción
+                </label>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Desde</label>
+                    <input
+                      type="date"
+                      v-model="excepcionFechaInicio"
+                      class="h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Hasta</label>
+                    <input
+                      type="date"
+                      v-model="excepcionFechaFin"
+                      class="h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Hasta</label>
-                  <input
-                    type="date"
-                    v-model="excepcionFechaFin"
-                    class="h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                  />
+              </div>
+
+              <!-- Tipo de configuración de excepción -->
+              <div>
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
+                  Configuración de excepción
+                </label>
+                <div class="flex gap-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    @click="modoConfiguracionExcepcion = 'repetitivo'"
+                    :class="[
+                      'flex-1 py-1.5 text-xs font-bold rounded-lg transition-all',
+                      modoConfiguracionExcepcion === 'repetitivo'
+                        ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    ]"
+                  >
+                    Repetitivo (por día de la semana)
+                  </button>
+                  <button
+                    type="button"
+                    @click="modoConfiguracionExcepcion = 'individual'"
+                    :class="[
+                      'flex-1 py-1.5 text-xs font-bold rounded-lg transition-all',
+                      modoConfiguracionExcepcion === 'individual'
+                        ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    ]"
+                  >
+                    Individual (por fecha específica)
+                  </button>
                 </div>
               </div>
             </div>
 
             <!-- 3. Horario masivo -->
-            <div class="bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-700/30 rounded-xl p-4">
+            <div v-if="tipoHorario === 'permanente' || (tipoHorario === 'excepcion' && modoConfiguracionExcepcion === 'repetitivo')" class="bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-700/30 rounded-xl p-4">
               <div class="flex items-center justify-between mb-3">
                 <label class="text-sm font-bold text-brand-700 dark:text-brand-400">
                   Aplicar horario a múltiples días
@@ -617,7 +660,7 @@
             </div>
 
             <!-- 4. Configuración por día -->
-            <div>
+            <div v-if="tipoHorario === 'permanente' || (tipoHorario === 'excepcion' && modoConfiguracionExcepcion === 'repetitivo')">
               <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
                 Configuración por día
               </label>
@@ -703,6 +746,105 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
                       </svg>
                       <span class="hidden sm:inline">{{ dia.tipo === 'descanso' ? 'Quitar' : 'Descanso' }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. Configuración por fecha específica (Solo excepciones individuales) -->
+            <div v-if="tipoHorario === 'excepcion' && modoConfiguracionExcepcion === 'individual'">
+              <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+                Configuración detallada por fecha
+              </label>
+              <div v-if="diasIndividuales.length === 0" class="text-sm text-gray-400 dark:text-gray-500 py-4 text-center">
+                Selecciona un rango de fechas válido (máximo 31 días) para configurar.
+              </div>
+              <div v-else class="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                <div
+                  v-for="dia in diasIndividuales"
+                  :key="dia.fecha"
+                  :class="[
+                    'rounded-xl border transition-all overflow-hidden p-3.5',
+                    dia.tipo === 'descanso'
+                      ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 opacity-70'
+                      : dia.activo
+                        ? 'border-brand-200 dark:border-brand-700/40 bg-white dark:bg-gray-800/50'
+                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/20'
+                  ]"
+                >
+                  <div class="flex items-center gap-3">
+                    <!-- Checkbox activar día -->
+                    <button
+                      type="button"
+                      @click="dia.tipo !== 'descanso' ? dia.activo = !dia.activo : null"
+                      :disabled="dia.tipo === 'descanso'"
+                      :class="[
+                        'w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all',
+                        dia.tipo === 'descanso'
+                          ? 'border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 cursor-not-allowed'
+                          : dia.activo
+                            ? 'border-brand-500 bg-brand-500'
+                            : 'border-gray-300 dark:border-gray-600 hover:border-brand-400'
+                      ]"
+                    >
+                      <svg v-if="dia.activo && dia.tipo !== 'descanso'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                      </svg>
+                    </button>
+
+                    <!-- Label del día de la semana y fecha -->
+                    <div class="flex flex-col flex-shrink-0 min-w-[120px]">
+                      <span class="text-sm font-bold text-gray-700 dark:text-gray-300 leading-tight">
+                        {{ dia.label.split(' ')[0] }}
+                      </span>
+                      <span class="text-xs text-gray-400 dark:text-gray-500">
+                        {{ dia.label.split(' ')[1] }}
+                      </span>
+                    </div>
+
+                    <!-- Horario (solo si activo y laboral) -->
+                    <div v-if="dia.activo && dia.tipo === 'laboral'" class="flex items-center gap-2 flex-1">
+                      <div class="flex-1">
+                        <TimeDropdown v-model="dia.hora_entrada" placeholder="Entrada" compact />
+                      </div>
+                      <span class="text-gray-400 text-xs font-bold">–</span>
+                      <div class="flex-1">
+                        <TimeDropdown v-model="dia.hora_salida" placeholder="Salida" compact />
+                      </div>
+                    </div>
+
+                    <!-- Descanso label -->
+                    <div v-else-if="dia.tipo === 'descanso'" class="flex-1 flex items-center gap-1.5">
+                      <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                      </svg>
+                      <span class="text-xs text-gray-400 dark:text-gray-500 font-medium">Descanso</span>
+                      <label class="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer ml-2 bg-indigo-50/50 dark:bg-indigo-950/25 px-2 py-0.5 rounded border border-indigo-100/50 dark:border-indigo-900/30">
+                        <input type="checkbox" v-model="dia.pagado" class="rounded border-gray-300 text-brand-600 focus:ring-brand-500 w-3.5 h-3.5" />
+                        <span>Pagado</span>
+                      </label>
+                    </div>
+
+                    <!-- Spacer when not active -->
+                    <div v-else class="flex-1 flex items-center">
+                      <span class="text-xs text-gray-400 italic">Heredar plantilla</span>
+                    </div>
+
+                    <!-- Toggle descanso -->
+                    <button
+                      type="button"
+                      @click="toggleDescansoIndividual(dia)"
+                      :title="dia.tipo === 'descanso' ? 'Quitar descanso' : 'Marcar como descanso'"
+                      :class="[
+                        'ml-auto flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all',
+                        dia.tipo === 'descanso'
+                          ? 'bg-indigo-100 text-indigo-600 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-700/40'
+                          : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:border-gray-600 hover:bg-indigo-50 hover:text-indigo-500 hover:border-indigo-200 dark:hover:bg-indigo-900/20'
+                      ]"
+                    >
+                      <span v-if="dia.tipo === 'descanso'">Laboral</span>
+                      <span v-else>Descanso</span>
                     </button>
                   </div>
                 </div>
@@ -1018,6 +1160,107 @@ const bulkSelectedDays = ref<number[]>([]);
 const bulkHoraEntrada = ref('');
 const bulkHoraSalida = ref('');
 
+// ── Lógica de Excepciones Individuales ──────────────────────────────────────────
+const modoConfiguracionExcepcion = ref<'repetitivo' | 'individual'>('repetitivo');
+const isInitializingEdit = ref(false);
+
+interface DiaIndividualConfig {
+    fecha: string;
+    label: string;
+    activo: boolean;
+    tipo: 'laboral' | 'descanso';
+    pagado: boolean;
+    hora_entrada: string;
+    hora_salida: string;
+}
+
+const diasIndividuales = ref<DiaIndividualConfig[]>([]);
+
+const actualizarDiasIndividuales = (forceOverride = false) => {
+    if (!excepcionFechaInicio.value || !excepcionFechaFin.value) {
+        diasIndividuales.value = [];
+        return;
+    }
+    const start = new Date(excepcionFechaInicio.value + 'T12:00:00');
+    const end = new Date(excepcionFechaFin.value + 'T12:00:00');
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+        diasIndividuales.value = [];
+        return;
+    }
+
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    if (diffDays > 31) {
+        diasIndividuales.value = [];
+        return;
+    }
+
+    const nuevosDias: DiaIndividualConfig[] = [];
+    const current = new Date(start);
+    const oldMap = new Map(diasIndividuales.value.map(d => [d.fecha, d]));
+
+    while (current <= end) {
+        const dateStr = current.toISOString().split('T')[0];
+        const dayJS = current.getDay();
+        const dayDB = dayJS === 0 ? 6 : dayJS - 1;
+        const diaSemanaLabel = DIAS_SEMANA[dayDB].name;
+        
+        const [y, m, d] = dateStr.split('-');
+        const label = `${diaSemanaLabel} ${d}/${m}`;
+
+        const oldConfig = oldMap.get(dateStr);
+        const template = diasSemana.value[dayDB];
+
+        if (oldConfig && !forceOverride) {
+            nuevosDias.push(oldConfig);
+        } else {
+            nuevosDias.push({
+                fecha: dateStr,
+                label,
+                activo: template?.activo ?? false,
+                tipo: template?.tipo ?? 'laboral',
+                pagado: template?.pagado ?? false,
+                hora_entrada: template?.hora_entrada ?? '',
+                hora_salida: template?.hora_salida ?? '',
+            });
+        }
+        current.setDate(current.getDate() + 1);
+    }
+    diasIndividuales.value = nuevosDias;
+};
+
+const toggleDescansoIndividual = (dia: DiaIndividualConfig) => {
+    if (dia.tipo === 'descanso') {
+        dia.tipo = 'laboral';
+        dia.activo = false;
+    } else {
+        dia.tipo = 'descanso';
+        dia.activo = false;
+        dia.hora_entrada = '';
+        dia.hora_salida = '';
+    }
+};
+
+watch([excepcionFechaInicio, excepcionFechaFin], () => {
+    if (modoConfiguracionExcepcion.value === 'individual') {
+        actualizarDiasIndividuales(false); // preserve edits on date change
+    }
+});
+
+watch(modoConfiguracionExcepcion, (newVal) => {
+    if (newVal === 'individual') {
+        if (isInitializingEdit.value) return; // skip override during edit initialization!
+        actualizarDiasIndividuales(true); // force copy from repetitive tab when switching!
+    }
+});
+
+watch(diasSemana, () => {
+    if (modoConfiguracionExcepcion.value === 'individual') {
+        actualizarDiasIndividuales(false);
+    }
+}, { deep: true });
+
+
 // ── Helpers de fecha ──────────────────────────────────────────────────────────
 const getTodayString = () => {
     const d = new Date();
@@ -1050,7 +1293,11 @@ const semanaDatesLabel = computed(() => {
 
 const resumenDias = computed(() => {
     let laborales = 0, descanso = 0, inactivos = 0;
-    for (const d of diasSemana.value) {
+    const targetArray = (tipoHorario.value === 'excepcion' && modoConfiguracionExcepcion.value === 'individual')
+        ? diasIndividuales.value
+        : diasSemana.value;
+
+    for (const d of targetArray) {
         if (d.tipo === 'descanso') descanso++;
         else if (d.activo) laborales++;
         else inactivos++;
@@ -1213,12 +1460,24 @@ const applyBulkSchedule = () => {
 };
 
 // ── Helpers de estado ─────────────────────────────────────────────────────────
+const formatMinutos = (mins?: number): string => {
+    if (!mins) return '';
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h > 0) {
+        return `${h}h${m > 0 ? ` ${m}m` : ''}`;
+    }
+    return `${m}m`;
+};
+
 const estadoBadgeClass = (estado: string) => ({
     'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400':           estado === 'pendiente',
     'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400': estado === 'puntual',
     'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400':        estado === 'retardo',
     'bg-red-600 text-white dark:bg-red-900/80 dark:text-red-200':                  estado === 'regreso',
     'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400':               estado === 'falta',
+    'bg-red-100 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30': estado === 'sin_salida',
+    'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400':    estado === 'horas_extras',
 });
 
 const estadoLabel = (estado: string): string => ({
@@ -1227,6 +1486,8 @@ const estadoLabel = (estado: string): string => ({
     retardo:       'Retardo',
     regreso:       'Regreso',
     falta:         'Falta',
+    sin_salida:    'Salida NO Checada',
+    horas_extras:  'Horas Extras',
 }[estado] ?? estado);
 
 // ── Modal: Agregar / Editar ───────────────────────────────────────────────────
@@ -1234,8 +1495,10 @@ const abrirAgregarNuevo = () => {
     modoEdicion.value = false;
     formData.value = { usuario_id: '', rol: '', semanaInicio: getTodayString() };
     tipoHorario.value = 'permanente';
+    modoConfiguracionExcepcion.value = 'repetitivo';
     excepcionFechaInicio.value = '';
     excepcionFechaFin.value = '';
+    diasIndividuales.value = [];
     resetDias();
     bulkSelectedDays.value = [];
     bulkHoraEntrada.value = '';
@@ -1244,6 +1507,7 @@ const abrirAgregarNuevo = () => {
 };
 
 const abrirEditar = (empleado: NominaRegistro) => {
+    isInitializingEdit.value = true;
     modoEdicion.value = true;
     formData.value = {
         usuario_id: empleado.usuario_id,
@@ -1251,13 +1515,38 @@ const abrirEditar = (empleado: NominaRegistro) => {
         semanaInicio: empleado.fecha ?? getTodayString(),
     };
     tipoHorario.value = 'excepcion';
+    modoConfiguracionExcepcion.value = 'individual';
     excepcionFechaInicio.value = empleado.fecha ?? getTodayString();
     excepcionFechaFin.value = empleado.fecha ?? getTodayString();
     resetDias();
     bulkSelectedDays.value = [];
     bulkHoraEntrada.value = '';
     bulkHoraSalida.value = '';
+    
+    if (empleado.fecha) {
+        const dayJS = new Date(empleado.fecha + 'T12:00:00').getDay();
+        const dayDB = dayJS === 0 ? 6 : dayJS - 1;
+        const diaSemanaLabel = DIAS_SEMANA[dayDB].name;
+        const [y, m, d] = empleado.fecha.split('-');
+        
+        diasIndividuales.value = [{
+            fecha: empleado.fecha,
+            label: `${diaSemanaLabel} ${d}/${m}`,
+            activo: !!empleado.hora_entrada,
+            tipo: empleado.hora_entrada ? 'laboral' : 'descanso',
+            pagado: false,
+            hora_entrada: empleado.hora_entrada || '',
+            hora_salida: empleado.hora_salida || '',
+        }];
+    } else {
+        diasIndividuales.value = [];
+    }
+
     showModal.value = true;
+    
+    setTimeout(() => {
+        isInitializingEdit.value = false;
+    }, 0);
 };
 
 const closeModal = () => { showModal.value = false; };
@@ -1340,46 +1629,95 @@ const guardarNomina = async () => {
         }
     }
 
-    const laborales = diasSemana.value
-        .map((d, idx) => ({ ...d, idx }))
-        .filter(d => d.activo && d.tipo === 'laboral');
+    if (tipoHorario.value === 'permanente' || (tipoHorario.value === 'excepcion' && modoConfiguracionExcepcion.value === 'repetitivo')) {
+        const laborales = diasSemana.value
+            .map((d, idx) => ({ ...d, idx }))
+            .filter(d => d.activo && d.tipo === 'laboral');
 
-    if (laborales.length === 0 && !diasSemana.value.some(d => d.tipo === 'descanso')) {
-        alert('Configura al menos un día laboral o de descanso');
-        return;
-    }
+        if (laborales.length === 0 && !diasSemana.value.some(d => d.tipo === 'descanso')) {
+            alert('Configura al menos un día laboral o de descanso');
+            return;
+        }
 
-    for (const d of laborales) {
-        if (!d.hora_entrada || !d.hora_salida) {
-            alert(`El día ${DIAS_SEMANA[d.idx].name} no tiene horario completo`);
+        for (const d of laborales) {
+            if (!d.hora_entrada || !d.hora_salida) {
+                alert(`El día ${DIAS_SEMANA[d.idx].name} no tiene horario completo`);
+                return;
+            }
+        }
+    } else {
+        const individualesConfigurados = diasIndividuales.value.some(d => d.tipo === 'descanso' || d.activo);
+        if (!individualesConfigurados) {
+            alert('Configura al menos un día laboral o de descanso para la excepción individual');
             return;
         }
     }
 
     saving.value = true;
 
-    // Preparar payload de días
-    const diasPayload = diasSemana.value
-        .map((d, idx) => ({
-            dia_semana: idx,
-            tipo: d.tipo,
-            pagado: d.tipo === 'descanso' ? !!d.pagado : false,
-            hora_entrada: d.activo && d.tipo === 'laboral' ? d.hora_entrada : null,
-            hora_salida:  d.activo && d.tipo === 'laboral' ? d.hora_salida  : null,
-        }))
-        .filter(d => activeWeekdays.value.includes(d.dia_semana))
-        .filter(d => d.tipo === 'descanso' || (diasSemana.value[d.dia_semana].activo && d.hora_entrada));
-
     let res;
     if (tipoHorario.value === 'permanente') {
+        // Preparar payload de días
+        const diasPayload = diasSemana.value
+            .map((d, idx) => ({
+                dia_semana: idx,
+                tipo: d.tipo,
+                pagado: d.tipo === 'descanso' ? !!d.pagado : false,
+                hora_entrada: d.activo && d.tipo === 'laboral' ? d.hora_entrada : null,
+                hora_salida:  d.activo && d.tipo === 'laboral' ? d.hora_salida  : null,
+            }))
+            .filter(d => d.tipo === 'descanso' || (diasSemana.value[d.dia_semana].activo && d.hora_entrada));
+
         res = await saveHorarioSemanal(Number(formData.value.usuario_id), diasPayload as any);
     } else {
-        res = await saveHorarioExcepcion(
-            Number(formData.value.usuario_id),
-            excepcionFechaInicio.value,
-            excepcionFechaFin.value,
-            diasPayload as any
-        );
+        if (modoConfiguracionExcepcion.value === 'individual') {
+            const excLaborales = diasIndividuales.value.filter(d => d.activo && d.tipo === 'laboral');
+            for (const d of excLaborales) {
+                if (!d.hora_entrada || !d.hora_salida) {
+                    alert(`El día ${d.label} no tiene horario completo`);
+                    saving.value = false;
+                    return;
+                }
+            }
+
+            const excepcionesPayload = diasIndividuales.value
+                .map(d => ({
+                    fecha: d.fecha,
+                    tipo: d.tipo,
+                    pagado: d.tipo === 'descanso' ? !!d.pagado : false,
+                    hora_entrada: d.activo && d.tipo === 'laboral' ? d.hora_entrada : null,
+                    hora_salida:  d.activo && d.tipo === 'laboral' ? d.hora_salida  : null,
+                }))
+                .filter(d => d.tipo === 'descanso' || d.hora_entrada);
+
+            res = await saveHorarioExcepcion(
+                Number(formData.value.usuario_id),
+                excepcionFechaInicio.value,
+                excepcionFechaFin.value,
+                [],
+                'individual',
+                excepcionesPayload
+            );
+        } else {
+            const diasPayload = diasSemana.value
+                .map((d, idx) => ({
+                    dia_semana: idx,
+                    tipo: d.tipo,
+                    pagado: d.tipo === 'descanso' ? !!d.pagado : false,
+                    hora_entrada: d.activo && d.tipo === 'laboral' ? d.hora_entrada : null,
+                    hora_salida:  d.activo && d.tipo === 'laboral' ? d.hora_salida  : null,
+                }))
+                .filter(d => activeWeekdays.value.includes(d.dia_semana))
+                .filter(d => d.tipo === 'descanso' || (diasSemana.value[d.dia_semana].activo && d.hora_entrada));
+
+            res = await saveHorarioExcepcion(
+                Number(formData.value.usuario_id),
+                excepcionFechaInicio.value,
+                excepcionFechaFin.value,
+                diasPayload as any,
+                'repetitivo'
+            );
+        }
     }
 
     if (!res.success) {
