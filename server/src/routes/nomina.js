@@ -81,7 +81,10 @@ router.get('/', async (req, res) => {
         `;
         const { rows } = await db.query(query, [fecha]);
 
-        const now = new Date();
+        // IMPORTANT: The server runs in UTC. Schedule times (hora_entrada/hora_salida) are
+        // stored without timezone, so new Date(`${fecha}T15:00:00`) is interpreted as 15:00 UTC.
+        // We must also compare against Mexico City wall-clock time (not UTC) to avoid false positives.
+        const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
 
         const result = rows.map(row => {
             let estado = 'pendiente';
@@ -320,7 +323,8 @@ router.get('/corte-quincenal', async (req, res) => {
         const pad = (n) => String(n).padStart(2, '0');
         let curr = new Date(fecha_inicio + 'T12:00:00');
         const end = new Date(fecha_fin + 'T12:00:00');
-        const now = new Date();
+        // IMPORTANT: Same timezone fix — compare Mexico City wall-clock time against schedule times.
+        const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
 
         while (curr <= end) {
             const y = curr.getFullYear();
