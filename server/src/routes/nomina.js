@@ -101,12 +101,12 @@ router.get('/', async (req, res) => {
 
             if (row.hora_real_salida) {
                 const horaRealS = new Date(row.hora_real_salida);
-                horaExactaSalida = horaRealS.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                horaExactaSalida = horaRealS.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
             }
 
             if (row.hora_real_entrada) {
                 const horaReal = new Date(row.hora_real_entrada);
-                horaExacta = horaReal.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                horaExacta = horaReal.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
 
                 if (horaReal >= ventanaPuntualMin && horaReal <= ventanaPuntualMax) {
                     estado = 'puntual';
@@ -385,7 +385,7 @@ router.get('/corte-quincenal', async (req, res) => {
 
             if (horaRealSalidaRaw) {
                 const horaRealS = new Date(horaRealSalidaRaw);
-                horaExactaSalida = horaRealS.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                horaExactaSalida = horaRealS.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
             }
 
             if (finalHoraEntrada) {
@@ -400,7 +400,7 @@ router.get('/corte-quincenal', async (req, res) => {
 
                 if (horaRealEntradaRaw) {
                     const horaReal = new Date(horaRealEntradaRaw);
-                    horaExacta = horaReal.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                    horaExacta = horaReal.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
 
                     if (horaReal >= ventanaPuntualMin && horaReal <= ventanaPuntualMax) {
                         estado = 'puntual';

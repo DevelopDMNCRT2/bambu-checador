@@ -51,6 +51,7 @@ import UserIcon from "./UserIcon.vue";
 import DollarIcon from "./DollarIcon.vue";
 import SwitchIcon from "./SwitchIcon.vue";
 import LightningIcon from "./LightningIcon.vue";
+import UploadIcon from "./UploadIcon.vue";
 
 
 
@@ -107,4 +108,5 @@ export {
   DollarIcon,
   SwitchIcon,
   LightningIcon,
+  UploadIcon,
 };

@@ -56,7 +56,7 @@ const router = createRouter({
       path: '/purchases',
       name: 'Purchases',
       component: () => import('../views/Admin/Purchases.vue'),
-      meta: { title: 'Compras' },
+      meta: { title: 'Compras y Gastos' },
     },
     {
       path: '/purchases/create',

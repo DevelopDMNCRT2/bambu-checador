@@ -107,3 +107,12 @@ npm run dev
   - **Estado "Salida NO Checada":** Si un empleado marca entrada pero no registra su salida pasados los 30 minutos de tolerancia, su estado cambia automáticamente a "Salida NO Checada" (en rojo).
   - **Estado "Horas Extras":** Si el empleado registra su salida después del periodo de tolerancia de 30 minutos, su estado cambia a "Horas Extras" (en morado) y se calcula de forma dinámica el tiempo extra trabajado (ej. `+2h 15m`).
   - **Resolución de Bug de Zona Horaria (UTC) en Asistencias:** Se corrigieron las consultas de agrupación de asistencias de `DATE(created_at)` a `(created_at AT TIME ZONE 'America/Mexico_City')::date` para evitar que los registros realizados después de las 6:00 PM (hora local de México) se interpreten como del día siguiente (UTC), solucionando el problema de registros perdidos.
+- **Migración de Sección Compras y Gastos:**
+  - Se importó la funcionalidad completa de registro y desglose de "Compras y Gastos" del proyecto `bambu-cloud`, incluyendo la importación y lectura automatizada de archivos XML.
+  - Se añadió la vista **Acumulado** dentro de Compras y Gastos: agrupa todos los insumos comprados por nombre de producto, mostrando cantidad total, precio promedio y costo total invertido por periodo (día, mes o rango).
+  - Se añadió el endpoint `GET /api/purchases/accumulated` en el backend para calcular el acumulado directamente en SQL.
+  - Se añadió el filtro **Mes** a la vista de Compras para facilitar comparaciones mensuales contra las ventas.
+- **Corrección de Bug: Horarios en Nómina Mostrados en UTC:**
+  - Se corrigió un bug en `server/src/routes/nomina.js` donde las horas exactas de entrada y salida (`horaExacta`, `horaExactaSalida`) se mostraban en UTC en lugar de hora local. Se forzó `timeZone: 'America/Mexico_City'` en todas las llamadas a `toLocaleTimeString`.
+- **Sección Estadísticas añadida al menú lateral:**
+  - Se añadió el acceso a la sección **Estadísticas** (`/stats`) en el menú lateral del panel de administración.

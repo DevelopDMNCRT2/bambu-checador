@@ -222,6 +222,7 @@ import {
   ChevronDownIcon,
   HorizontalDots,
   TableIcon,
+  DollarIcon,
 } from "../../icons";
 
 
@@ -236,6 +237,11 @@ const rawMenuGroups = [
     title: "Administración",
     items: [
       {
+        icon: PieChartIcon,
+        name: "Estadísticas",
+        path: "/stats",
+      },
+      {
         icon: GridIcon,
         name: "Empleados",
         path: "/users",
@@ -244,6 +250,11 @@ const rawMenuGroups = [
         icon: TableIcon,
         name: "Nómina",
         path: "/nomina",
+      },
+      {
+        icon: DollarIcon,
+        name: "Compras y Gastos",
+        path: "/purchases",
       },
     ],
   },
