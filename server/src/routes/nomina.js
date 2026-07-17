@@ -125,8 +125,8 @@ router.get('/', async (req, res) => {
                 }
 
                 // Evaluar salida
-                if (row.hora_real_salida) {
-                    const horaRealS = new Date(row.hora_real_salida);
+                if (row.hora_real_salida_ts) {
+                    const horaRealS = new Date(row.hora_real_salida_ts);
                     if (horaRealS > ventanaSalidaMax) {
                         estado = 'horas_extras';
                         const diffMins = Math.round((horaRealS.getTime() - horaSalidaDate.getTime()) / 60000);
