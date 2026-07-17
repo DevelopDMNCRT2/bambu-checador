@@ -61,7 +61,8 @@ router.get('/', async (req, res) => {
             }
         }
 
-        // Nota: Obtenemos hora_real_entrada y hora_real_salida dinámicamente de asistencias
+        // Nota: hora_real_entrada_fmt y hora_real_salida_fmt ya vienen formateadas en hora México
+        // directamente desde PostgreSQL, sin depender del Intl API de Node.js.
         const query = `
             SELECT
                 n.id,
@@ -71,8 +72,10 @@ router.get('/', async (req, res) => {
                 TO_CHAR(n.hora_entrada, 'HH24:MI') as hora_entrada,
                 TO_CHAR(n.hora_salida,  'HH24:MI') as hora_salida,
                 TO_CHAR(n.fecha, 'YYYY-MM-DD')     as fecha,
-                (SELECT MIN(created_at) FROM asistencias WHERE usuario_id = n.usuario_id AND tipo = 'Entrada' AND (created_at AT TIME ZONE 'America/Mexico_City')::date = n.fecha) as hora_real_entrada,
-                (SELECT MAX(created_at) FROM asistencias WHERE usuario_id = n.usuario_id AND tipo = 'Salida' AND (created_at AT TIME ZONE 'America/Mexico_City')::date = n.fecha) as hora_real_salida
+                (SELECT MIN(created_at) FROM asistencias WHERE usuario_id = n.usuario_id AND tipo = 'Entrada' AND (created_at AT TIME ZONE 'America/Mexico_City')::date = n.fecha) as hora_real_entrada_ts,
+                (SELECT MAX(created_at) FROM asistencias WHERE usuario_id = n.usuario_id AND tipo = 'Salida'  AND (created_at AT TIME ZONE 'America/Mexico_City')::date = n.fecha) as hora_real_salida_ts,
+                TO_CHAR((SELECT MIN(created_at) FROM asistencias WHERE usuario_id = n.usuario_id AND tipo = 'Entrada' AND (created_at AT TIME ZONE 'America/Mexico_City')::date = n.fecha) AT TIME ZONE 'America/Mexico_City', 'HH12:MI AM') as hora_real_entrada_fmt,
+                TO_CHAR((SELECT MAX(created_at) FROM asistencias WHERE usuario_id = n.usuario_id AND tipo = 'Salida'  AND (created_at AT TIME ZONE 'America/Mexico_City')::date = n.fecha) AT TIME ZONE 'America/Mexico_City', 'HH12:MI AM') as hora_real_salida_fmt
             FROM nomina n
             JOIN users u ON n.usuario_id = u.id
             WHERE TO_CHAR(n.fecha, 'YYYY-MM-DD') = $1
@@ -102,14 +105,14 @@ router.get('/', async (req, res) => {
             const ventanaFalta      = new Date(horaEntradaDate.getTime() +   2 * 3600000); // +2 h (si no checa)
             const ventanaSalidaMax  = new Date(horaSalidaDate.getTime() +   30 * 60000); // +30 min tolerancia de salida
 
-            if (row.hora_real_salida) {
-                const horaRealS = new Date(row.hora_real_salida);
-                horaExactaSalida = horaRealS.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
+            if (row.hora_real_salida_ts) {
+                const horaRealS = new Date(row.hora_real_salida_ts);
+                horaExactaSalida = row.hora_real_salida_fmt || horaRealS.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
             }
 
-            if (row.hora_real_entrada) {
-                const horaReal = new Date(row.hora_real_entrada);
-                horaExacta = horaReal.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
+            if (row.hora_real_entrada_ts) {
+                const horaReal = new Date(row.hora_real_entrada_ts);
+                horaExacta = row.hora_real_entrada_fmt || horaReal.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
 
                 if (horaReal >= ventanaPuntualMin && horaReal <= ventanaPuntualMax) {
                     estado = 'puntual';
@@ -286,7 +289,7 @@ router.get('/corte-quincenal', async (req, res) => {
             db.query(`SELECT dia_semana, tipo, hora_entrada, hora_salida FROM horarios_semanales WHERE usuario_id = $1`, [usuario_id]),
             db.query(`SELECT fecha_inicio, fecha_fin, dia_semana, tipo, hora_entrada, hora_salida FROM horarios_excepciones WHERE usuario_id = $1 AND NOT (fecha_fin < $2 OR fecha_inicio > $3)`, [usuario_id, fecha_inicio, fecha_fin]),
             db.query(`SELECT id, rol, TO_CHAR(hora_entrada, 'HH24:MI') as hora_entrada, TO_CHAR(hora_salida, 'HH24:MI') as hora_salida, TO_CHAR(fecha, 'YYYY-MM-DD') as fecha FROM nomina WHERE usuario_id = $1 AND fecha BETWEEN $2 AND $3`, [usuario_id, fecha_inicio, fecha_fin]),
-            db.query(`SELECT tipo, created_at, TO_CHAR(created_at AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD') as fecha FROM asistencias WHERE usuario_id = $1 AND (created_at AT TIME ZONE 'America/Mexico_City')::date BETWEEN $2 AND $3 ORDER BY created_at ASC`, [usuario_id, fecha_inicio, fecha_fin])
+            db.query(`SELECT tipo, created_at, TO_CHAR(created_at AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD') as fecha, TO_CHAR(created_at AT TIME ZONE 'America/Mexico_City', 'HH12:MI AM') as hora_fmt FROM asistencias WHERE usuario_id = $1 AND (created_at AT TIME ZONE 'America/Mexico_City')::date BETWEEN $2 AND $3 ORDER BY created_at ASC`, [usuario_id, fecha_inicio, fecha_fin])
         ]);
 
         const userRes = await db.query('SELECT role, name FROM users WHERE id = $1', [usuario_id]);
@@ -313,9 +316,9 @@ router.get('/corte-quincenal', async (req, res) => {
                 asistenciasMap[r.fecha] = { entradas: [], salidas: [] };
             }
             if (r.tipo === 'Entrada') {
-                asistenciasMap[r.fecha].entradas.push(r.created_at);
+                asistenciasMap[r.fecha].entradas.push({ ts: r.created_at, fmt: r.hora_fmt });
             } else if (r.tipo === 'Salida') {
-                asistenciasMap[r.fecha].salidas.push(r.created_at);
+                asistenciasMap[r.fecha].salidas.push({ ts: r.created_at, fmt: r.hora_fmt });
             }
         });
 
@@ -388,8 +391,8 @@ router.get('/corte-quincenal', async (req, res) => {
             let horas_extras_mins = 0;
 
             if (horaRealSalidaRaw) {
-                const horaRealS = new Date(horaRealSalidaRaw);
-                horaExactaSalida = horaRealS.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
+                const horaRealS = new Date(horaRealSalidaRaw.ts);
+                horaExactaSalida = horaRealSalidaRaw.fmt || horaRealS.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
             }
 
             if (finalHoraEntrada) {
@@ -403,8 +406,8 @@ router.get('/corte-quincenal', async (req, res) => {
                 const ventanaSalidaMax  = new Date(horaSalidaDate.getTime() +   30 * 60000);
 
                 if (horaRealEntradaRaw) {
-                    const horaReal = new Date(horaRealEntradaRaw);
-                    horaExacta = horaReal.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
+                    const horaReal = new Date(horaRealEntradaRaw.ts);
+                    horaExacta = horaRealEntradaRaw.fmt || horaReal.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
 
                     if (horaReal >= ventanaPuntualMin && horaReal <= ventanaPuntualMax) {
                         estado = 'puntual';
@@ -416,9 +419,8 @@ router.get('/corte-quincenal', async (req, res) => {
                         estado = 'puntual';
                     }
 
-                    // Evaluar salida
                     if (horaRealSalidaRaw) {
-                        const horaRealS = new Date(horaRealSalidaRaw);
+                        const horaRealS = new Date(horaRealSalidaRaw.ts);
                         if (horaRealS > ventanaSalidaMax) {
                             estado = 'horas_extras';
                             const diffMins = Math.round((horaRealS.getTime() - horaSalidaDate.getTime()) / 60000);
