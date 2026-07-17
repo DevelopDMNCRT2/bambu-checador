@@ -84,10 +84,8 @@ router.get('/', async (req, res) => {
         `;
         const { rows } = await db.query(query, [fecha]);
 
-        // IMPORTANT: The server runs in UTC. Schedule times (hora_entrada/hora_salida) are
-        // stored without timezone, so new Date(`${fecha}T15:00:00`) is interpreted as 15:00 UTC.
-        // We must also compare against Mexico City wall-clock time (not UTC) to avoid false positives.
-        const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+        // Use real UTC for 'now' since the database timestamps are now real UTC.
+        const now = new Date();
 
         const result = rows.map(row => {
             let estado = 'pendiente';
@@ -95,8 +93,9 @@ router.get('/', async (req, res) => {
             let horaExactaSalida = null;
             let horas_extras_mins = 0;
 
-            const horaEntradaDate = new Date(`${fecha}T${row.hora_entrada}:00`);
-            const horaSalidaDate = new Date(`${fecha}T${row.hora_salida}:00`);
+            // Forzamos -06:00 para que Node.js convierta el horario local de México al UTC real correcto
+            const horaEntradaDate = new Date(`${fecha}T${row.hora_entrada}:00-06:00`);
+            const horaSalidaDate = new Date(`${fecha}T${row.hora_salida}:00-06:00`);
 
             // Ventanas de tiempo actualizadas
             const ventanaPuntualMin = new Date(horaEntradaDate.getTime() -  15 * 60000); // -15 min (puede checar temprano)
@@ -326,8 +325,8 @@ router.get('/corte-quincenal', async (req, res) => {
         const pad = (n) => String(n).padStart(2, '0');
         let curr = new Date(fecha_inicio + 'T12:00:00');
         const end = new Date(fecha_fin + 'T12:00:00');
-        // IMPORTANT: Same timezone fix — compare Mexico City wall-clock time against schedule times.
-        const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+        // Use real UTC for 'now'
+        const now = new Date();
 
         while (curr <= end) {
             const y = curr.getFullYear();
@@ -396,8 +395,9 @@ router.get('/corte-quincenal', async (req, res) => {
             }
 
             if (finalHoraEntrada) {
-                const horaEntradaDate = new Date(`${dateStr}T${finalHoraEntrada}:00`);
-                const horaSalidaDate = new Date(`${dateStr}T${finalHoraSalida}:00`);
+                // Forzamos -06:00 para alinear con el UTC real
+                const horaEntradaDate = new Date(`${dateStr}T${finalHoraEntrada}:00-06:00`);
+                const horaSalidaDate = new Date(`${dateStr}T${finalHoraSalida}:00-06:00`);
 
                 const ventanaPuntualMin = new Date(horaEntradaDate.getTime() -  15 * 60000);
                 const ventanaPuntualMax = new Date(horaEntradaDate.getTime() +  20 * 60000);
