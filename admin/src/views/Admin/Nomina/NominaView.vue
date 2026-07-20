@@ -264,9 +264,14 @@
             {{ corteLoading ? 'Calculando...' : 'Generar Corte' }}
           </Button>
 
-          <Button v-if="corteResumen" size="md" variant="outline" @click="exportarQuincenal" class="rounded-xl w-full md:w-auto h-[38px] flex items-center justify-center">
-            Exportar CSV
-          </Button>
+          <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+            <Button v-if="corteResumen" size="md" variant="outline" @click="exportarQuincenal" class="rounded-xl w-full md:w-auto h-[38px] flex items-center justify-center">
+              Exportar CSV
+            </Button>
+            <Button v-if="corteResumen" size="md" variant="outline" @click="exportarQuincenalPDF" class="rounded-xl w-full md:w-auto h-[38px] flex items-center justify-center border-brand-500 text-brand-600 hover:bg-brand-50 dark:border-brand-400 dark:text-brand-400 dark:hover:bg-brand-900/20">
+              Exportar PDF
+            </Button>
+          </div>
         </div>
 
         <!-- Resultados del Corte -->
@@ -1068,6 +1073,8 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import AdminLayout from '@/components/layout/AdminLayout.vue';
 import Button from '@/components/ui/Button.vue';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import TimeDropdown from './TimeDropdown.vue';
 import { useNomina, type NominaRegistro } from '@/composables/useNomina';
 import { authFetch } from '@/utils/api';
@@ -1909,6 +1916,149 @@ const exportarQuincenal = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+};
+
+const exportarQuincenalPDF = async () => {
+    if (!corteResumen.value || !corteDetalle.value.length) return;
+    
+    const empName = users.value.find(u => u.id === Number(corteUsuarioId.value))?.name || 'Empleado';
+    const mesNom = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][corteMes.value - 1];
+    const periodo = `Quincena ${corteQuincena.value} - ${mesNom} ${corteAnio.value}`;
+
+    const doc = new jsPDF();
+    
+    // Configuración de colores
+    const brandColor: [number, number, number] = [16, 185, 129]; // emerald-500
+    const textColor = [55, 65, 81];
+    
+    // Título
+    doc.setFontSize(18);
+    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+    doc.text('Reporte de Asistencia Quincenal', 14, 20);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Empleado: ${empName}`, 14, 28);
+    doc.text(`Periodo: ${periodo}`, 14, 34);
+
+    // Cards (Resumen)
+    const metrics = [
+        { 
+            label: 'DÍAS TRABAJADOS', value: corteResumen.value.dias_trabajados, 
+            color: [16, 185, 129], bg: [236, 253, 245], border: [209, 250, 229], textCol: [5, 150, 105], 
+            path: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' 
+        },
+        { 
+            label: 'ENTRADAS', value: corteResumen.value.entradas, 
+            color: [59, 130, 246], bg: [239, 246, 255], border: [219, 234, 254], textCol: [37, 99, 235], 
+            path: 'M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h3a3 3 0 013 3v1' 
+        },
+        { 
+            label: 'SALIDAS', value: corteResumen.value.salidas, 
+            color: [99, 102, 241], bg: [238, 242, 255], border: [224, 231, 255], textCol: [79, 70, 229], 
+            path: 'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h3a3 3 0 013 3v1' 
+        },
+        { 
+            label: 'RETARDOS', value: corteResumen.value.retardos, 
+            color: [245, 158, 11], bg: [255, 251, 235], border: [254, 243, 199], textCol: [217, 119, 6], 
+            path: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z' 
+        },
+        { 
+            label: 'FALTAS', value: corteResumen.value.faltas, 
+            color: [239, 68, 68], bg: [254, 242, 242], border: [254, 226, 226], textCol: [220, 38, 38], 
+            path: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' 
+        }
+    ];
+
+    const drawSvgIcon = (svgPath: string, x: number, y: number, size: number) => {
+        return new Promise<void>((resolve) => {
+            const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="${svgPath}" /></svg>`;
+            const img = new Image();
+            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = size * 8;
+                canvas.height = size * 8;
+                const ctx = canvas.getContext('2d');
+                if(ctx) {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    doc.addImage(canvas.toDataURL('image/png'), 'PNG', x, y, size, size);
+                }
+                resolve();
+            };
+            img.onerror = () => resolve();
+        });
+    };
+
+    let startX = 14;
+    const cardY = 42;
+    const cardWidth = 34;
+    const cardHeight = 32;
+
+    for (const m of metrics) {
+        // Fondo del card
+        doc.setFillColor(m.bg[0], m.bg[1], m.bg[2]);
+        doc.setDrawColor(m.border[0], m.border[1], m.border[2]);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(startX, cardY, cardWidth, cardHeight, 3, 3, 'FD'); 
+        
+        // Círculo del icono
+        const circleY = cardY + 9;
+        const circleX = startX + cardWidth / 2;
+        doc.setFillColor(m.color[0], m.color[1], m.color[2]);
+        doc.circle(circleX, circleY, 4.5, 'F');
+        
+        // Ícono SVG (blanco) en el centro del círculo
+        await drawSvgIcon(m.path, circleX - 2.5, circleY - 2.5, 5);
+        
+        // Título del card
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(m.textCol[0], m.textCol[1], m.textCol[2]);
+        doc.text(m.label, startX + cardWidth/2, cardY + 20, { align: 'center' });
+        
+        // Valor del card
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.setTextColor(31, 41, 55); 
+        doc.text(m.value.toString(), startX + cardWidth/2, cardY + 28, { align: 'center' });
+        
+        startX += cardWidth + 4;
+    }
+
+    // Restaurar fuente normal para la tabla
+    doc.setFont('helvetica', 'normal');
+
+    // Tabla Detallada
+    const tableData = corteDetalle.value.map(r => [
+        r.fecha.split('-').reverse().join('/'),
+        `${r.hora_entrada} - ${r.hora_salida}`,
+        r.horaExacta || '—',
+        r.horaExactaSalida || '—',
+        estadoLabel(r.estadoChecado)
+    ]);
+
+    autoTable(doc, {
+        startY: cardY + cardHeight + 10,
+        head: [['Fecha', 'Horario Teórico', 'Llegada Real', 'Salida Real', 'Estado']],
+        body: tableData,
+        headStyles: { fillColor: brandColor, textColor: 255 },
+        styles: { fontSize: 9, cellPadding: 3 },
+        didParseCell: function (data) {
+            if (data.section === 'body' && data.column.index === 4) {
+                const estado = data.cell.raw as string;
+                if (estado === 'Puntual' || estado === 'Horas extras') {
+                    data.cell.styles.textColor = [16, 185, 129] as [number, number, number];
+                } else if (estado === 'Retardo' || estado === 'Sin salida') {
+                    data.cell.styles.textColor = [245, 158, 11] as [number, number, number];
+                } else if (estado === 'Falta' || estado === 'Regreso') {
+                    data.cell.styles.textColor = [239, 68, 68] as [number, number, number];
+                }
+            }
+        }
+    });
+
+    doc.save(`corte_quincenal_${empName.replace(/\s+/g, '_')}_${mesNom}_Q${corteQuincena.value}.pdf`);
 };
 </script>
 
