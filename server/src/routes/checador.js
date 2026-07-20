@@ -194,7 +194,7 @@ router.post('/registro', async (req, res) => {
         const { rows } = await db.query(
             `INSERT INTO asistencias (usuario_id, tipo, latitud, longitud, distancia_metros)
              VALUES ($1, $2, $3, $4, $5)
-             RETURNING id, tipo, distancia_metros, TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as fecha_hora`,
+             RETURNING id, tipo, distancia_metros, TO_CHAR(created_at AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD HH24:MI:SS') as fecha_hora`,
             [usuarioId, tipo, latitud, longitud, distancia ? Math.round(distancia) : null]
         );
 
@@ -215,7 +215,7 @@ router.get('/historial', async (req, res) => {
         if (!userRes.rows.length) return res.json([]);
 
         const { rows } = await db.query(`
-            SELECT a.id, a.tipo, TO_CHAR(a.created_at, 'YYYY-MM-DD HH24:MI:SS') as fecha_hora
+            SELECT a.id, a.tipo, TO_CHAR(a.created_at AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD HH24:MI:SS') as fecha_hora
             FROM asistencias a
             WHERE a.usuario_id = $1
             ORDER BY a.created_at DESC
