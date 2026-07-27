@@ -13,8 +13,16 @@ export default defineConfig({
     vueDevTools(),
   ],
   server: {
+    host: true,
+    allowedHosts: ['10.0.99.245', 'localhost', '.localhost'],
     port: 5173,
     strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
   },
   resolve: {
     alias: {

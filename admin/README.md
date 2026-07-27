@@ -1,4 +1,4 @@
-# TailAdmin Vue - Free Vue.js Tailwind CSS Admin Dashboard Template
+# Bambú Asistente - Panel Administrativo
 
 TailAdmin Vue is a free, open-source admin dashboard template **built on Vue.js**, popular and progressive JavaScript
 framework, and **Tailwind CSS**. This **powerful combination** provides developers with an extensive library of

@@ -218,7 +218,7 @@ const router = createRouter({
 export default router
 
 router.beforeEach((to, from, next) => {
-  document.title = `Bambu Admin | ${to.meta.title || 'Dashboard'}`;
+  document.title = `Bambú Asistente | ${to.meta.title || 'Dashboard'}`;
 
   const publicPages = ['/', '/error-404', '/checador'];
   const authRequired = !publicPages.includes(to.path);
