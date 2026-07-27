@@ -116,3 +116,12 @@ npm run dev
   - Se corrigió un bug en `server/src/routes/nomina.js` donde las horas exactas de entrada y salida (`horaExacta`, `horaExactaSalida`) se mostraban en UTC en lugar de hora local. Se forzó `timeZone: 'America/Mexico_City'` en todas las llamadas a `toLocaleTimeString`.
 - **Sección Estadísticas añadida al menú lateral:**
   - Se añadió el acceso a la sección **Estadísticas** (`/stats`) en el menú lateral del panel de administración.
+
+### 🗓 27 de Julio 2026
+
+- **Corrección de Error HTTP 500 y Desglose de IVA Opcional en Compras (Issue #2):**
+  - **Migración de Base de Datos:** Se ejecutó el script `server/scripts/migrations/migration_add_cost_type.js` agregando la columna `cost_type` a `purchase_items` e `has_iva` a `purchases`.
+  - **Fix Error 500:** Se reparó el fallo de inserción al guardar compras manuales desde el panel administrativo, permitiendo el almacenamiento exitoso del desglose de productos.
+  - **IVA Opcional:** Se integró un switch de control en la suma de totales de `CreatePurchase.vue` y `EditPurchase.vue` (y soporte en API `/server/src/routes/purchases.js`), permitiendo registrar compras sin factura o insumos exentos de IVA.
+  - **Integridad de Descuentos:** Se añadió protección y validación para evitar que descuentos mayores al subtotal generen importes o totales negativos.
+

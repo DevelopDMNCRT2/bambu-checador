@@ -126,7 +126,8 @@ router.get('/', async (req, res) => {
         TO_CHAR(purchase_date, 'YYYY-MM-DD') as date, 
         total, 
         payment_method as "paymentMethod",
-        status
+        status,
+        COALESCE(has_iva, true) as "hasIva"
       FROM purchases 
       WHERE deleted_at IS NULL 
       ORDER BY created_at DESC
@@ -150,7 +151,8 @@ router.get('/:id', async (req, res) => {
         TO_CHAR(purchase_date, 'YYYY-MM-DD') as date, 
         total, 
         payment_method as "paymentMethod",
-        status
+        status,
+        COALESCE(has_iva, true) as "hasIva"
       FROM purchases 
       WHERE id = $1 AND deleted_at IS NULL
     `, [id]);
@@ -168,12 +170,14 @@ router.get('/:id', async (req, res) => {
 // CREATE purchase
 router.post('/', async (req, res) => {
     console.log('POST /api/purchases body:', req.body);
-    const { ticketNumber, provider, date, total, paymentMethod, items } = req.body;
+    const { ticketNumber, provider, date, total, paymentMethod, items, hasIva } = req.body;
 
     if (!ticketNumber || !provider || !date || !total || !paymentMethod) {
         console.log('Missing fields');
         return res.status(400).json({ error: 'All fields are required' });
     }
+
+    const aplicaIva = hasIva !== undefined ? Boolean(hasIva) : true;
 
     const client = await db.pool.connect();
     try {
@@ -194,9 +198,9 @@ router.post('/', async (req, res) => {
         const status = (items && Array.isArray(items) && items.length > 0) ? 'Desglosado' : 'Sin Desglose';
 
         const { rows } = await client.query(
-            `INSERT INTO purchases (ticket_number, provider, purchase_date, total, payment_method, status, created_at) 
-             VALUES ($1, $2, $3, $4, $5, $6, (NOW() AT TIME ZONE 'America/Mexico_City')) RETURNING *`,
-            [ticketNumber, provider, date, total, paymentMethod, status]
+            `INSERT INTO purchases (ticket_number, provider, purchase_date, total, payment_method, status, has_iva, created_at) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, (NOW() AT TIME ZONE 'America/Mexico_City')) RETURNING *`,
+            [ticketNumber, provider, date, total, paymentMethod, status, aplicaIva]
         );
         const purchase = rows[0];
 
@@ -231,7 +235,8 @@ router.post('/', async (req, res) => {
             date: purchase.purchase_date,
             total: purchase.total,
             paymentMethod: purchase.payment_method,
-            status: purchase.status
+            status: purchase.status,
+            hasIva: purchase.has_iva
         });
     } catch (err) {
         await client.query('ROLLBACK');
@@ -383,17 +388,19 @@ router.post('/aliases', async (req, res) => {
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
     console.log(`PUT /api/purchases/${id} body:`, req.body);
-    const { ticketNumber, provider, date, total, paymentMethod } = req.body;
+    const { ticketNumber, provider, date, total, paymentMethod, hasIva } = req.body;
 
     if (!ticketNumber || !provider || !date || !total || !paymentMethod) {
         return res.status(400).json({ error: 'All fields are required' });
     }
 
+    const aplicaIva = hasIva !== undefined ? Boolean(hasIva) : true;
+
     try {
         const { rows } = await db.query(
-            `UPDATE purchases SET ticket_number = $1, provider = $2, purchase_date = $3, total = $4, payment_method = $5, updated_at = (NOW() AT TIME ZONE 'America/Mexico_City') 
-             WHERE id = $6 RETURNING *`,
-            [ticketNumber, provider, date, total, paymentMethod, id]
+            `UPDATE purchases SET ticket_number = $1, provider = $2, purchase_date = $3, total = $4, payment_method = $5, has_iva = $6, updated_at = (NOW() AT TIME ZONE 'America/Mexico_City') 
+             WHERE id = $7 RETURNING *`,
+            [ticketNumber, provider, date, total, paymentMethod, aplicaIva, id]
         );
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Purchase not found' });
