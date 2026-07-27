@@ -49,6 +49,7 @@
               </span>
             </div>
           </div>
+
         </div>
 
         <!-- Detalle de la factura -->
@@ -109,7 +110,7 @@
                       <input type="number" v-model.number="item.descuento" step="0.01" min="0" class="w-full min-w-[100px] text-right rounded-lg border border-gray-300 bg-transparent px-3 py-1.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800" />
                     </td>
                     <td class="px-3 py-4 text-right">
-                      <p class="text-gray-800 font-medium text-theme-sm dark:text-white/90">{{ formatCurrency((item.cantidad * item.precioUnitario) - item.descuento) }}</p>
+                      <p class="text-gray-800 font-medium text-theme-sm dark:text-white/90">{{ formatCurrency(Math.max(0, (item.cantidad * item.precioUnitario) - item.descuento)) }}</p>
                     </td>
                     <td class="px-4 py-4 text-center">
                       <button @click="removeItemRow(index)" type="button" class="text-gray-400 hover:text-error-500 transition-colors" title="Eliminar fila">
@@ -130,9 +131,19 @@
                   <span class="text-sm font-medium text-gray-500 dark:text-gray-400">SUBTOTAL</span>
                   <span class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ formatCurrency(calculatedSubtotal) }}</span>
                 </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-sm font-medium text-gray-500 dark:text-gray-400">IVA (16%)</span>
-                  <span class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ formatCurrency(calculatedIva) }}</span>
+                <div class="flex justify-between items-center py-1">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium" :class="formData.hasIva ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500 line-through'">
+                      IVA (16%)
+                    </span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" v-model="formData.hasIva" class="sr-only peer">
+                      <div class="w-8 h-4 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-gray-600 peer-checked:bg-brand-500"></div>
+                    </label>
+                  </div>
+                  <span class="text-sm font-semibold" :class="formData.hasIva ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 dark:text-gray-500'">
+                    {{ formatCurrency(calculatedIva) }}
+                  </span>
                 </div>
                 <div class="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
                   <span class="text-base font-medium text-gray-800 dark:text-white/90">Total</span>
@@ -171,6 +182,7 @@ const formData = reactive({
   date: new Date().toISOString().split('T')[0],
   provider: '',
   paymentMethod: 'Efectivo',
+  hasIva: true,
   items: [] as any[]
 });
 
@@ -179,12 +191,12 @@ const calculatedSubtotal = computed(() => {
     const qty = Number(item.cantidad) || 0;
     const price = Number(item.precioUnitario) || 0;
     const discount = Number(item.descuento) || 0;
-    return acc + ((qty * price) - discount);
+    return acc + Math.max(0, (qty * price) - discount);
   }, 0);
 });
 
 const calculatedIva = computed(() => {
-  return calculatedSubtotal.value * 0.16;
+  return formData.hasIva ? calculatedSubtotal.value * 0.16 : 0;
 });
 
 const calculatedGranTotal = computed(() => {
@@ -238,6 +250,10 @@ const saveCompra = async () => {
       apiError.value = 'La cantidad debe ser mayor que 0 y el precio unitario no puede ser negativo.';
       return;
     }
+    if (item.descuento > (item.cantidad * item.precioUnitario)) {
+      apiError.value = `El descuento del producto "${item.producto}" no puede ser mayor que su subtotal ($${(item.cantidad * item.precioUnitario).toFixed(2)}).`;
+      return;
+    }
   }
 
   saving.value = true;
@@ -247,6 +263,7 @@ const saveCompra = async () => {
       provider: formData.provider,
       date: formData.date,
       paymentMethod: formData.paymentMethod,
+      hasIva: formData.hasIva,
       total: calculatedGranTotal.value,
       items: formData.items
     };
