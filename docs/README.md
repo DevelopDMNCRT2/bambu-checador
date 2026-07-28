@@ -125,3 +125,10 @@ npm run dev
   - **IVA Opcional:** Se integró un switch de control en la suma de totales de `CreatePurchase.vue` y `EditPurchase.vue` (y soporte en API `/server/src/routes/purchases.js`), permitiendo registrar compras sin factura o insumos exentos de IVA.
   - **Integridad de Descuentos:** Se añadió protección y validación para evitar que descuentos mayores al subtotal generen importes o totales negativos.
 
+### 🗓 28 de Julio 2026
+
+- **Rediseño UI/UX del Switch de IVA en Compras (Issue #8):**
+  - **Componente Visual Robusto:** Se rediseñó el selector de IVA en `CreatePurchase.vue` y `EditPurchase.vue` con un pill toggle moderno (`w-11 h-6`), sombras internas y estado activo destacado en color verde esmeralda (`bg-emerald-500`).
+  - **Responsividad:** Se añadieron clases Flexbox adaptables (`flex-wrap sm:flex-nowrap shrink-0`) garantizando alineación sin deformaciones en dispositivos móviles y de escritorio.
+
+

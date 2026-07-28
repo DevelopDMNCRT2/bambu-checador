@@ -131,17 +131,17 @@
                   <span class="text-sm font-medium text-gray-500 dark:text-gray-400">SUBTOTAL</span>
                   <span class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ formatCurrency(calculatedSubtotal) }}</span>
                 </div>
-                <div class="flex justify-between items-center py-1">
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium" :class="formData.hasIva ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500 line-through'">
-                      IVA (16%)
-                    </span>
-                    <label class="relative inline-flex items-center cursor-pointer">
+                <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 py-2 border-y border-gray-100 dark:border-gray-800 my-1">
+                  <div class="flex items-center gap-3 shrink-0">
+                    <label class="relative inline-flex items-center cursor-pointer select-none shrink-0">
                       <input type="checkbox" v-model="formData.hasIva" class="sr-only peer">
-                      <div class="w-8 h-4 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-gray-600 peer-checked:bg-brand-500"></div>
+                      <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all after:duration-300 peer-checked:bg-emerald-500 shadow-inner"></div>
                     </label>
+                    <span class="text-xs font-semibold uppercase tracking-wider transition-colors whitespace-nowrap" :class="formData.hasIva ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'">
+                      {{ formData.hasIva ? 'Aplica IVA (16%)' : 'Sin IVA / Venta Directa' }}
+                    </span>
                   </div>
-                  <span class="text-sm font-semibold" :class="formData.hasIva ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 dark:text-gray-500'">
+                  <span class="text-sm font-semibold transition-all shrink-0" :class="formData.hasIva ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 dark:text-gray-500 line-through'">
                     {{ formatCurrency(calculatedIva) }}
                   </span>
                 </div>
