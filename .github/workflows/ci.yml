@@ -1,0 +1,56 @@
+name: CI / CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  frontend-check:
+    name: Frontend Build & Type Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'admin/package-lock.json'
+
+      - name: Install Frontend Dependencies
+        working-directory: ./admin
+        run: npm ci
+
+      - name: Build & Type-Check Frontend
+        working-directory: ./admin
+        run: npm run build
+
+  backend-check:
+    name: Backend Syntax & Test Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'server/package-lock.json'
+
+      - name: Install Backend Dependencies
+        working-directory: ./server
+        run: npm ci
+
+      - name: Run Backend Syntax Test
+        working-directory: ./server
+        run: npm test
