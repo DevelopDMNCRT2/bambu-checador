@@ -125,3 +125,11 @@ npm run dev
   - **IVA Opcional:** Se integró un switch de control en la suma de totales de `CreatePurchase.vue` y `EditPurchase.vue` (y soporte en API `/server/src/routes/purchases.js`), permitiendo registrar compras sin factura o insumos exentos de IVA.
   - **Integridad de Descuentos:** Se añadió protección y validación para evitar que descuentos mayores al subtotal generen importes o totales negativos.
 
+### 🗓 28 de Julio 2026
+
+- **Totalización de Compras Segmentada por Forma de Pago y Proveedor (Issue #14):**
+  - **Endpoint Backend API:** Creado `GET /api/purchases/summary` en `server/src/routes/purchases.js` ejecutando consultas agregadas SQL (`GROUP BY payment_method`, `GROUP BY provider`) con filtros por fecha.
+  - **Paneles y Tarjetas de Métricas:** Creadas tarjetas de resumen financiero (Total Invertido, Total de Compras y Ticket Promedio) en `Purchases.vue`.
+  - **Segmentación por Forma de Pago y Proveedor:** Añadidas tablas desglosadas por cada método de pago (Efectivo, Tarjeta, etc.) y por cada proveedor ordenado por inversión.
+
+
