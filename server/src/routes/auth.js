@@ -13,8 +13,11 @@ router.post('/login', async (req, res) => {
     }
 
     try {
-        // Find user
-        const result = await db.query('SELECT * FROM users WHERE username = $1 AND deleted_at IS NULL', [username]);
+        // Find user by username or email
+        const result = await db.query(
+            'SELECT * FROM users WHERE (username = $1 OR email = $1) AND deleted_at IS NULL',
+            [username]
+        );
 
         if (result.rows.length === 0) {
             return res.status(401).json({ error: 'Invalid credentials' });
@@ -22,17 +25,11 @@ router.post('/login', async (req, res) => {
 
         const user = result.rows[0];
 
-        // Compare password
-        // Note: For compatibility with existing plain text passwords in dev, we check both.
-        // Ideally, migrate all to bcrypt.
+        // Compare password (bcrypt hash or plain text fallback)
         let match = false;
-
-        // 1. Try bcrypt compare (assuming it might be hashed)
-        const isHashed = user.password.startsWith('$2b$');
-        if (isHashed) {
+        if (user.password && (user.password.startsWith('$2b$') || user.password.startsWith('$2a$'))) {
             match = await bcrypt.compare(password, user.password);
         } else {
-            // 2. Fallback to plain text check (legacy/dev)
             match = (password === user.password);
         }
 

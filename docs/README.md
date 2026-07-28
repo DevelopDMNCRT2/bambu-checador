@@ -32,6 +32,7 @@ Asegúrate de que las variables de entorno estén configuradas en cada módulo.
 ```env
 DATABASE_URL=postgresql://neondb_owner:npg_rVa5LBcR3Ixz@ep-dry-fog-ats3t5hi-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 PORT=3001
+JWT_SECRET=bambu_checador_jwt_secret_key_2026
 RESTAURANTE_LAT=19.4422797
 RESTAURANTE_LNG=-99.2032339
 ```
@@ -124,4 +125,12 @@ npm run dev
   - **Fix Error 500:** Se reparó el fallo de inserción al guardar compras manuales desde el panel administrativo, permitiendo el almacenamiento exitoso del desglose de productos.
   - **IVA Opcional:** Se integró un switch de control en la suma de totales de `CreatePurchase.vue` y `EditPurchase.vue` (y soporte en API `/server/src/routes/purchases.js`), permitiendo registrar compras sin factura o insumos exentos de IVA.
   - **Integridad de Descuentos:** Se añadió protección y validación para evitar que descuentos mayores al subtotal generen importes o totales negativos.
+
+### 🗓 28 de Julio 2026
+
+- **Sistema de Autenticación JWT y Protección de Rutas (Issue #7):**
+  - **Seguridad Backend:** Se agregó la variable de entorno `JWT_SECRET` en `/server/.env` y se reforzó el firmado de tokens de 8h en `POST /api/auth/login`.
+  - **Middleware JWT:** Se validó que el middleware `auth.js` exija el header `Authorization: Bearer <token>` respondiendo `401 Unauthorized` si no existe o es inválido.
+  - **Navigation Guards (Vue Router):** Se configuraron los guards `router.beforeEach` en `admin/src/router/index.ts` impidiendo el acceso a rutas privadas a usuarios sin token o con un rol distinto a `Administrador`.
+
 
