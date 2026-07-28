@@ -125,3 +125,10 @@ npm run dev
   - **IVA Opcional:** Se integró un switch de control en la suma de totales de `CreatePurchase.vue` y `EditPurchase.vue` (y soporte en API `/server/src/routes/purchases.js`), permitiendo registrar compras sin factura o insumos exentos de IVA.
   - **Integridad de Descuentos:** Se añadió protección y validación para evitar que descuentos mayores al subtotal generen importes o totales negativos.
 
+### 🗓 28 de Julio 2026
+
+- **Mejoras UX/UI en Selector de Fecha y Encabezado de Nómina (Issue #5):**
+  - **Limpieza de Encabezado:** Se eliminó el subtítulo *"Gestión de horarios y asistencia del personal"* de la vista de Nómina (`NominaView.vue`) dejando la interfaz más limpia y directa.
+  - **Pre-carga Inteligente de Fecha:** Al cambiar el filtro de período al modo **"Día"**, el campo selector de fecha se inicializa pre-cargado automáticamente con la fecha actual (`YYYY-MM-DD` en hora local México) evitando campos vacíos.
+
+

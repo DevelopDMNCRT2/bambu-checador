@@ -30,7 +30,6 @@
         <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
           <div>
             <h2 class="text-xl font-semibold text-gray-800 dark:text-white/90">Nómina</h2>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Gestión de horarios y asistencia del personal</p>
           </div>
 
           <div class="flex flex-wrap items-center gap-3">
@@ -1352,6 +1351,18 @@ watch(activeWeekdays, (newVal) => {
 });
 
 // ── Filtros de fecha ──────────────────────────────────────────────────────────
+watch(filterType, (newVal) => {
+    if (newVal === 'dia' && !filterDate.value) {
+        filterDate.value = getTodayString();
+    }
+});
+
+watch(detalleFilterType, (newVal) => {
+    if (newVal === 'dia' && !detalleFilterDate.value) {
+        detalleFilterDate.value = getTodayString();
+    }
+});
+
 const currentDateString = computed(() =>
     filterType.value === 'hoy' ? getTodayString() : (filterDate.value || getTodayString())
 );
