@@ -216,7 +216,7 @@
               class="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
             >
               <option value="">Selecciona un empleado...</option>
-              <option v-for="u in users" :key="u.id" :value="u.id">
+              <option v-for="u in empleadosOnly" :key="u.id" :value="u.id">
                 {{ u.name }}
               </option>
             </select>
@@ -544,7 +544,7 @@
                   :disabled="loadingHorario"
                 >
                   <option value="">Selecciona un usuario...</option>
-                  <option v-for="u in users" :key="u.id" :value="u.id">
+                  <option v-for="u in empleadosOnly" :key="u.id" :value="u.id">
                     {{ u.name }} ({{ u.role }})
                   </option>
                 </select>
@@ -1118,6 +1118,7 @@ const { nominas: detalleNominasRaw, loading: detalleLoading, fetchNominas: fetch
 
 // ── Estado global ─────────────────────────────────────────────────────────────
 const users = ref<User[]>([]);
+const empleadosOnly = computed(() => users.value.filter(u => u.role !== 'Administrador'));
 const searchQuery = ref('');
 const filterType = ref('hoy');
 const filterDate = ref('');
