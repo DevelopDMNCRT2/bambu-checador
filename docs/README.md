@@ -125,3 +125,11 @@ npm run dev
   - **IVA Opcional:** Se integró un switch de control en la suma de totales de `CreatePurchase.vue` y `EditPurchase.vue` (y soporte en API `/server/src/routes/purchases.js`), permitiendo registrar compras sin factura o insumos exentos de IVA.
   - **Integridad de Descuentos:** Se añadió protección y validación para evitar que descuentos mayores al subtotal generen importes o totales negativos.
 
+### 🗓 28 de Julio 2026
+
+- **Registro de Administrador Oficial y Exclusión en Nómina (Issue #6):**
+  - **Alta de Administradora Oficial (Mitzy Muro):** Se actualizó y ejecutó el script `server/scripts/seed_admin.js` sembrando a **Mitzy Muro** (`wallmitzy@gmail.com`) con rol `Administrador` y contraseña encriptada con bcrypt (`Sully2026!`).
+  - **Soporte de Login Flexible:** Se actualizó `/api/auth/login` en `server/src/routes/auth.js` permitiendo el inicio de sesión tanto por usuario (`mitzymuro`) como por correo electrónico (`wallmitzy@gmail.com`).
+  - **Filtrado Estricto de Administradores en Nómina:** Se agregaron filtros `WHERE u.role != 'Administrador'` en el backend (`nomina.js`) y filtros en el frontend (`NominaView.vue`), garantizando que ningún usuario administrador aparezca en listas, reportes o asignaciones de asistencia operativa.
+
+

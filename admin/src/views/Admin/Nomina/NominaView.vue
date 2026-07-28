@@ -1370,9 +1370,10 @@ watch(currentDetalleDateString, (newDate) => {
 
 // ── Computed: tabla principal ─────────────────────────────────────────────────
 const filteredEmpleados = computed(() => {
-    if (!searchQuery.value) return nominas.value;
+    const list = nominas.value.filter(emp => emp.rol !== 'Administrador');
+    if (!searchQuery.value) return list;
     const q = searchQuery.value.toLowerCase();
-    return nominas.value.filter(emp =>
+    return list.filter(emp =>
         emp.usuario.toLowerCase().includes(q) ||
         emp.rol.toLowerCase().includes(q)
     );
@@ -1419,7 +1420,10 @@ watch(() => formData.value.usuario_id, async (newId) => {
 onMounted(async () => {
     try {
         const res = await authFetch('/api/users');
-        if (res.ok) users.value = await res.json();
+        if (res.ok) {
+            const rawUsers: User[] = await res.json();
+            users.value = rawUsers.filter(u => u.role !== 'Administrador');
+        }
     } catch (err) {
         console.error('Error cargando usuarios:', err);
     }
