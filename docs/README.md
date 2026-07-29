@@ -132,6 +132,13 @@ npm run dev
   - **Job Frontend (`/admin`):** Instalación limpia con caché (`npm ci`), verificación de tipos con `vue-tsc` y empaquetado de producción con `vite build`.
   - **Job Backend (`/server`):** Instalación limpia (`npm ci`) y chequeo de sintaxis de Node.js mediante `npm test` (`node --check src/server.js`).
 
+### 🗓 29 de Julio 2026
+
+- **Corrección de Evento y Estado en Sugerencias de Coincidencia XML (Issue #16):**
+  - **Reparación del Botón Confirmar:** Enlazado el evento `@click` en el botón *"✔ Confirmar"* dentro de `ImportXMLModal.vue`, asignando correctamente el `productId` sugerido y activando el flag `confirmed`.
+  - **Retroalimentación Visual:** Incorporados estilos dinámicos de confirmación (borde e indicador verde `✓ Coincidencia vinculada` y texto `✓ Confirmado`) al aprobar sugerencias.
+  - **Funcionamiento del Botón 'Otro...':** Asegurada la correcta alternancia para descartar la coincidencia y desplegar el selector de productos existentes o creación como nuevo.
+
 ---
 
 ## 🔄 Pipeline de CI/CD (GitHub Actions)
@@ -159,4 +166,5 @@ cd admin && npm run build
 # Validar Backend (/server)
 cd server && npm test
 ```
+
 

@@ -142,26 +142,33 @@
               <!-- MEDIUM suggestion -->
               <div v-if="concept.confidence === 'medium' && !concept.showFullList" class="space-y-2">
                 <p class="text-xs text-gray-500 dark:text-gray-400">Posible coincidencia encontrada:</p>
-                <div class="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700">
+                <div 
+                  class="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-white dark:bg-gray-800 border transition-all duration-200"
+                  :class="concept.confirmed ? 'border-emerald-500 bg-emerald-50/30 dark:border-emerald-700/50 dark:bg-emerald-900/10' : 'border-amber-300 dark:border-amber-700'"
+                >
                   <div>
                     <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ concept.suggestions[0].name }}</p>
-                    <p class="text-xs text-amber-600 dark:text-amber-400">Similitud: {{ concept.suggestions[0].score }}%</p>
+                    <p class="text-xs" :class="concept.confirmed ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-amber-600 dark:text-amber-400'">
+                      {{ concept.confirmed ? '✓ Coincidencia vinculada' : 'Similitud: ' + concept.suggestions[0].score + '%' }}
+                    </p>
                   </div>
                   <div class="flex gap-2 shrink-0">
                     <button
-                      @click="concept.selectedOption = concept.suggestions[0].id"
+                      type="button"
+                      @click="concept.selectedOption = concept.suggestions[0].id; concept.confirmed = true;"
                       :class="[
-                        'px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors',
-                        concept.selectedOption === concept.suggestions[0].id
-                          ? 'bg-brand-500 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-brand-50 hover:text-brand-600 dark:bg-gray-700 dark:text-gray-300'
+                        'px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer select-none',
+                        concept.confirmed || concept.selectedOption === concept.suggestions[0].id
+                          ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                          : 'bg-brand-500 text-white hover:bg-brand-600'
                       ]"
                     >
-                      ✔ Confirmar
+                      ✓ {{ concept.confirmed ? 'Confirmado' : 'Confirmar' }}
                     </button>
                     <button
-                      @click="concept.showFullList = true; concept.selectedOption = ''"
-                      class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 transition-colors"
+                      type="button"
+                      @click="concept.showFullList = true; concept.selectedOption = ''; concept.confirmed = false;"
+                      class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 transition-colors cursor-pointer select-none"
                     >
                       Otro...
                     </button>
@@ -494,6 +501,7 @@ const analyzeConcepts = async () => {
           selectedOption: r.confidence === 'medium' && r.suggestions.length > 0
             ? r.suggestions[0].id
             : '',
+          confirmed: r.confidence === 'medium' && r.suggestions.length > 0,
           showFullList: false,
           newName: r.supplierDescription
         });
