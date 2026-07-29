@@ -125,3 +125,11 @@ npm run dev
   - **IVA Opcional:** Se integró un switch de control en la suma de totales de `CreatePurchase.vue` y `EditPurchase.vue` (y soporte en API `/server/src/routes/purchases.js`), permitiendo registrar compras sin factura o insumos exentos de IVA.
   - **Integridad de Descuentos:** Se añadió protección y validación para evitar que descuentos mayores al subtotal generen importes o totales negativos.
 
+### 🗓 29 de Julio 2026
+
+- **Corrección de Evento y Estado en Sugerencias de Coincidencia XML (Issue #16):**
+  - **Reparación del Botón Confirmar:** Enlazado el evento `@click` en el botón *"✔ Confirmar"* dentro de `ImportXMLModal.vue`, asignando correctamente el `productId` sugerido y activando el flag `confirmed`.
+  - **Retroalimentación Visual:** Incorporados estilos dinámicos de confirmación (borde e indicador verde `✓ Coincidencia vinculada` y texto `✓ Confirmado`) al aprobar sugerencias.
+  - **Funcionamiento del Botón 'Otro...':** Asegurada la correcta alternancia para descartar la coincidencia y desplegar el selector de productos existentes o creación como nuevo.
+
+
