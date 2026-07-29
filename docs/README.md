@@ -127,9 +127,41 @@ npm run dev
 
 ### 🗓 28 de Julio 2026
 
+- **Pipeline CI/CD Automatizado con GitHub Actions (Issue #3):**
+  - **Flujo de Integración Continuo:** Se creó `.github/workflows/ci.yml` configurado para ejecutarse en `push` y `pull_request` sobre `main` y `develop`.
+  - **Job Frontend (`/admin`):** Instalación limpia con caché (`npm ci`), verificación de tipos con `vue-tsc` y empaquetado de producción con `vite build`.
+  - **Job Backend (`/server`):** Instalación limpia (`npm ci`) y chequeo de sintaxis de Node.js mediante `npm test` (`node --check src/server.js`).
+
 - **Totalización de Compras Segmentada por Forma de Pago y Proveedor (Issue #14):**
   - **Endpoint Backend API:** Creado `GET /api/purchases/summary` en `server/src/routes/purchases.js` ejecutando consultas agregadas SQL (`GROUP BY payment_method`, `GROUP BY provider`) con filtros por fecha.
   - **Paneles y Tarjetas de Métricas:** Creadas tarjetas de resumen financiero (Total Invertido, Total de Compras y Ticket Promedio) en `Purchases.vue`.
   - **Segmentación por Forma de Pago y Proveedor:** Añadidas tablas desglosadas por cada método de pago (Efectivo, Tarjeta, etc.) y por cada proveedor ordenado por inversión.
 
+---
+
+## 🔄 Pipeline de CI/CD (GitHub Actions)
+
+El proyecto cuenta con integración continua automatizada mediante **GitHub Actions** para garantizar la estabilidad y prevenir regresiones antes de fusionar cualquier código a `main` o `develop`.
+
+### Configuración del Workflow (`.github/workflows/ci.yml`)
+
+1. **Disparadores (Triggers):**
+   - **`pull_request`:** Todo PR abierto hacia `main` o `develop`.
+   - **`push`:** Cada push directo o merge a `main` o `develop`.
+
+2. **Jobs de Validación:**
+   - **`frontend-check`:** Ejecutado en Node 20 en la carpeta `/admin`. Instala dependencias con caché en `admin/package-lock.json` y ejecuta `npm run build` (`vue-tsc` + `vite build`).
+   - **`backend-check`:** Ejecutado en Node 20 en la carpeta `/server`. Instala dependencias con caché en `server/package-lock.json` y ejecuta `npm test` (verificación sintáctica de JavaScript).
+
+### Comandos de Verificación Local
+
+Antes de subir cambios a una rama o abrir un Pull Request, ejecuta localmente:
+
+```bash
+# Validar Frontend (/admin)
+cd admin && npm run build
+
+# Validar Backend (/server)
+cd server && npm test
+```
 
