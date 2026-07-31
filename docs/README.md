@@ -141,6 +141,10 @@ npm run dev
 - **Mejoras UX/UI en Selector de Fecha y Encabezado de Nómina (Issue #5):**
   - **Limpieza de Encabezado:** Se eliminó el subtítulo *"Gestión de horarios y asistencia del personal"* de la vista de Nómina (`NominaView.vue`) dejando la interfaz más limpia y directa.
   - **Pre-carga Inteligente de Fecha:** Al cambiar el filtro de período al modo **"Día"**, el campo selector de fecha se inicializa pre-cargado automáticamente con la fecha actual (`YYYY-MM-DD` en hora local México) evitando campos vacíos.
+- **Registro de Administrador Oficial y Exclusión en Nómina (Issue #6):**
+  - **Alta de Administradora Oficial (Mitzy Muro):** Se actualizó y ejecutó el script `server/scripts/seed_admin.js` sembrando a **Mitzy Muro** (`wallmitzy@gmail.com`) con rol `Administrador` y contraseña encriptada con bcrypt (`Sully2026!`).
+  - **Soporte de Login Flexible:** Se actualizó `/api/auth/login` en `server/src/routes/auth.js` permitiendo el inicio de sesión tanto por usuario (`mitzymuro`) como por correo electrónico (`wallmitzy@gmail.com`).
+  - **Filtrado Estricto de Administradores en Nómina:** Se agregaron filtros `WHERE u.role != 'Administrador'` en el backend (`nomina.js`) y filtros en el frontend (`NominaView.vue`), garantizando que ningún usuario administrador aparezca en listas, reportes o asignaciones de asistencia operativa.
 
 ---
 

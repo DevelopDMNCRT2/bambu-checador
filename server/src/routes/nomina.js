@@ -80,6 +80,7 @@ router.get('/', async (req, res) => {
             JOIN users u ON n.usuario_id = u.id
             WHERE TO_CHAR(n.fecha, 'YYYY-MM-DD') = $1
               AND u.deleted_at IS NULL
+              AND u.role != 'Administrador'
             ORDER BY n.hora_entrada ASC
         `;
         const { rows } = await db.query(query, [fecha]);
