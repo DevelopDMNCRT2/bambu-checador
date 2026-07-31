@@ -150,6 +150,9 @@ npm run dev
   - **Seguridad Backend:** Se agregó la variable de entorno `JWT_SECRET` en `/server/.env` y se reforzó el firmado de tokens de 8h en `POST /api/auth/login`.
   - **Middleware JWT:** Se validó que el middleware `auth.js` exija el header `Authorization: Bearer <token>` respondiendo `401 Unauthorized` si no existe o es inválido.
   - **Navigation Guards (Vue Router):** Se configuraron los guards `router.beforeEach` en `admin/src/router/index.ts` impidiendo el acceso a rutas privadas a usuarios sin token o con un rol distinto a `Administrador`.
+- **Rediseño UI/UX del Switch de IVA en Compras (Issue #8):**
+  - **Componente Visual Robusto:** Se rediseñó el selector de IVA en `CreatePurchase.vue` y `EditPurchase.vue` con un pill toggle moderno (`w-11 h-6`), sombras internas y estado activo destacado en color verde esmeralda (`bg-emerald-500`).
+  - **Responsividad:** Se añadieron clases Flexbox adaptables (`flex-wrap sm:flex-nowrap shrink-0`) garantizando alineación sin deformaciones en dispositivos móviles y de escritorio.
 
 ---
 
