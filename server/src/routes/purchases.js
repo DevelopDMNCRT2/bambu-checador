@@ -115,6 +115,73 @@ router.get('/accumulated', async (req, res) => {
     }
 });
 
+// GET /api/purchases/summary - Segmented totals by payment method and provider
+router.get('/summary', async (req, res) => {
+    const { startDate, endDate } = req.query;
+
+    try {
+        let whereClause = 'WHERE deleted_at IS NULL';
+        const params = [];
+
+        if (startDate && endDate) {
+            whereClause += ' AND purchase_date BETWEEN $1 AND $2';
+            params.push(startDate, endDate);
+        } else if (startDate) {
+            whereClause += ' AND purchase_date >= $1';
+            params.push(startDate);
+        } else if (endDate) {
+            whereClause += ' AND purchase_date <= $1';
+            params.push(endDate);
+        }
+
+        const [metricsRes, paymentMethodsRes, providersRes] = await Promise.all([
+            db.query(`
+                SELECT 
+                    COUNT(*)::int as "totalPurchases",
+                    COALESCE(SUM(total), 0)::float as "totalSpent",
+                    COALESCE(AVG(total), 0)::float as "averageTicket"
+                FROM purchases
+                ${whereClause}
+            `, params),
+            db.query(`
+                SELECT 
+                    COALESCE(payment_method, 'No especificado') as "paymentMethod",
+                    COUNT(*)::int as "count",
+                    COALESCE(SUM(total), 0)::float as "total"
+                FROM purchases
+                ${whereClause}
+                GROUP BY COALESCE(payment_method, 'No especificado')
+                ORDER BY "total" DESC
+            `, params),
+            db.query(`
+                SELECT 
+                    COALESCE(provider, 'Sin proveedor') as "provider",
+                    COUNT(*)::int as "count",
+                    COALESCE(SUM(total), 0)::float as "total"
+                FROM purchases
+                ${whereClause}
+                GROUP BY COALESCE(provider, 'Sin proveedor')
+                ORDER BY "total" DESC
+            `, params)
+        ]);
+
+        const metrics = metricsRes.rows[0] || { totalPurchases: 0, totalSpent: 0, averageTicket: 0 };
+
+        res.json({
+            metrics: {
+                totalPurchases: metrics.totalPurchases,
+                totalSpent: Math.round(metrics.totalSpent * 100) / 100,
+                averageTicket: Math.round(metrics.averageTicket * 100) / 100
+            },
+            byPaymentMethod: paymentMethodsRes.rows,
+            byProvider: providersRes.rows
+        });
+    } catch (err) {
+        console.error('Error fetching purchase summary:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // GET all purchases
 router.get('/', async (req, res) => {
     try {

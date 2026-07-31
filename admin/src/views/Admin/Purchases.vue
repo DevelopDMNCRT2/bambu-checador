@@ -14,16 +14,23 @@
              <button 
               @click="viewMode = 'tickets'" 
               :class="viewMode === 'tickets' ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-200'"
-              class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 select-none flex items-center gap-2"
+              class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 select-none flex items-center gap-2"
             >
               Tickets
             </button>
             <button 
+              @click="viewMode = 'summary'" 
+              :class="viewMode === 'summary' ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-200'"
+              class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 select-none flex items-center gap-2"
+            >
+              Totalización
+            </button>
+            <button 
               @click="viewMode = 'accumulated'" 
               :class="viewMode === 'accumulated' ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-200'"
-              class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 select-none flex items-center gap-2"
+              class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 select-none flex items-center gap-2"
             >
-              Acumulado
+              Conceptos
             </button>
           </div>
 
@@ -193,6 +200,104 @@
         </div>
       </div>
 
+      <!-- Totalización / Summary View -->
+      <div v-if="viewMode === 'summary'" class="space-y-6">
+        <!-- Tarjetas de Métricas -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm flex items-center justify-between">
+            <div>
+              <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Total Invertido</p>
+              <h3 class="text-2xl font-bold text-brand-600 dark:text-brand-400 mt-1">${{ summaryData.metrics.totalSpent.toLocaleString('es-MX', { minimumFractionDigits: 2 }) }}</h3>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-900/20 text-brand-500 flex items-center justify-center">
+              <DollarIcon class="w-6 h-6" />
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm flex items-center justify-between">
+            <div>
+              <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Total de Compras</p>
+              <h3 class="text-2xl font-bold text-gray-800 dark:text-white mt-1">{{ summaryData.metrics.totalPurchases }} tickets</h3>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 flex items-center justify-center">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm flex items-center justify-between">
+            <div>
+              <p class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Ticket Promedio</p>
+              <h3 class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">${{ summaryData.metrics.averageTicket.toLocaleString('es-MX', { minimumFractionDigits: 2 }) }}</h3>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-500 flex items-center justify-center">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tablas de Segmentación: Forma de Pago y Proveedor -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Desglose por Forma de Pago -->
+          <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm">
+            <h3 class="text-base font-semibold text-gray-800 dark:text-white mb-4">Totalización por Forma de Pago</h3>
+            <div class="overflow-x-auto">
+              <table class="min-w-full">
+                <thead>
+                  <tr class="border-b border-gray-100 dark:border-gray-700 text-left text-xs font-semibold text-gray-400 uppercase">
+                    <th class="py-2.5 px-3">Forma de Pago</th>
+                    <th class="py-2.5 px-3 text-center">Compras</th>
+                    <th class="py-2.5 px-3 text-right">Monto Total</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
+                  <tr v-if="summaryData.byPaymentMethod.length === 0">
+                    <td colspan="3" class="py-4 text-center text-gray-400">Sin datos de compras</td>
+                  </tr>
+                  <tr v-for="(pm, idx) in summaryData.byPaymentMethod" :key="idx" class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <td class="py-3 px-3 font-medium text-gray-800 dark:text-white">
+                      <span class="inline-block w-2.5 h-2.5 rounded-full mr-2" :class="idx % 2 === 0 ? 'bg-brand-500' : 'bg-emerald-500'"></span>
+                      {{ pm.paymentMethod }}
+                    </td>
+                    <td class="py-3 px-3 text-center text-gray-500 dark:text-gray-400 font-semibold">{{ pm.count }}</td>
+                    <td class="py-3 px-3 text-right font-bold text-gray-800 dark:text-white">${{ Number(pm.total).toLocaleString('es-MX', { minimumFractionDigits: 2 }) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Desglose por Proveedor -->
+          <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700/50 shadow-sm">
+            <h3 class="text-base font-semibold text-gray-800 dark:text-white mb-4">Totalización por Proveedor</h3>
+            <div class="overflow-x-auto">
+              <table class="min-w-full">
+                <thead>
+                  <tr class="border-b border-gray-100 dark:border-gray-700 text-left text-xs font-semibold text-gray-400 uppercase">
+                    <th class="py-2.5 px-3">Proveedor</th>
+                    <th class="py-2.5 px-3 text-center">Compras</th>
+                    <th class="py-2.5 px-3 text-right">Monto Total</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
+                  <tr v-if="summaryData.byProvider.length === 0">
+                    <td colspan="3" class="py-4 text-center text-gray-400">Sin datos de proveedores</td>
+                  </tr>
+                  <tr v-for="(prov, idx) in summaryData.byProvider" :key="idx" class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <td class="py-3 px-3 font-medium text-gray-800 dark:text-white">{{ prov.provider }}</td>
+                    <td class="py-3 px-3 text-center text-gray-500 dark:text-gray-400 font-semibold">{{ prov.count }}</td>
+                    <td class="py-3 px-3 text-right font-bold text-brand-600 dark:text-brand-400">${{ Number(prov.total).toLocaleString('es-MX', { minimumFractionDigits: 2 }) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
        <!-- Accumulated Table Container -->
       <div v-if="viewMode === 'accumulated'" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="max-w-full overflow-x-auto custom-scrollbar">
@@ -278,13 +383,64 @@ const isXMLModalOpen = ref(false);
 const searchQuery = ref('');
 
 // State
-const viewMode = ref<'tickets' | 'accumulated'>('tickets');
+const viewMode = ref<'tickets' | 'summary' | 'accumulated'>('tickets');
 const activeFilter = ref('today');
 const selectedDate = ref(new Date().toLocaleDateString('en-CA'));
 const selectedMonth = ref(new Date().toISOString().slice(0, 7)); // YYYY-MM
 
 const purchases = ref<any[]>([]);
 const accumulatedItems = ref<any[]>([]);
+const summaryData = ref<{
+    metrics: { totalPurchases: number; totalSpent: number; averageTicket: number };
+    byPaymentMethod: Array<{ paymentMethod: string; count: number; total: number }>;
+    byProvider: Array<{ provider: string; count: number; total: number }>;
+}>({
+    metrics: { totalPurchases: 0, totalSpent: 0, averageTicket: 0 },
+    byPaymentMethod: [],
+    byProvider: []
+});
+
+const fetchSummary = async () => {
+    let startDate = '';
+    let endDate = '';
+
+    if (activeFilter.value === 'today') {
+        const today = getTodayString();
+        startDate = today;
+        endDate = today;
+    } else if (activeFilter.value === 'day') {
+        startDate = selectedDate.value;
+        endDate = selectedDate.value;
+    } else if (activeFilter.value === 'month' && selectedMonth.value) {
+        const [year, month] = selectedMonth.value.split('-');
+        const firstDay = new Date(Number(year), Number(month) - 1, 1);
+        const lastDay = new Date(Number(year), Number(month), 0);
+        
+        const yearStart = firstDay.getFullYear();
+        const monthStart = String(firstDay.getMonth() + 1).padStart(2, '0');
+        startDate = `${yearStart}-${monthStart}-01`;
+        
+        const yearEnd = lastDay.getFullYear();
+        const monthEnd = String(lastDay.getMonth() + 1).padStart(2, '0');
+        const dayEnd = String(lastDay.getDate()).padStart(2, '0');
+        endDate = `${yearEnd}-${monthEnd}-${dayEnd}`;
+    }
+
+    try {
+        const params = new URLSearchParams();
+        if (startDate && endDate) {
+            params.append('startDate', startDate);
+            params.append('endDate', endDate);
+        }
+        
+        const response = await authFetch(`/api/purchases/summary?${params}`);
+        if (response.ok) {
+            summaryData.value = await response.json();
+        }
+    } catch (error) {
+        console.error('Error fetching purchase summary:', error);
+    }
+};
 
 // Fetch Accumulated Data
 const fetchAccumulated = async () => {
@@ -303,7 +459,6 @@ const fetchAccumulated = async () => {
         const firstDay = new Date(Number(year), Number(month) - 1, 1);
         const lastDay = new Date(Number(year), Number(month), 0);
         
-        // Ensure month format preserves zeros using toLocaleDateString might be risky based on locale, manual formatting is safer
         const yearStart = firstDay.getFullYear();
         const monthStart = String(firstDay.getMonth() + 1).padStart(2, '0');
         startDate = `${yearStart}-${monthStart}-01`;
@@ -313,7 +468,6 @@ const fetchAccumulated = async () => {
         const dayEnd = String(lastDay.getDate()).padStart(2, '0');
         endDate = `${yearEnd}-${monthEnd}-${dayEnd}`;
     } else {
-        // If "no_breakdown" or something else, default to this month to prevent huge queries
         const [year, month] = selectedMonth.value.split('-');
         const firstDay = new Date(Number(year), Number(month) - 1, 1);
         const lastDay = new Date(Number(year), Number(month), 0);
@@ -378,6 +532,8 @@ const handleXMLImported = () => {
 const fetchData = () => {
     if (viewMode.value === 'tickets') {
         fetchPurchases();
+    } else if (viewMode.value === 'summary') {
+        fetchSummary();
     } else {
         fetchAccumulated();
     }
@@ -389,7 +545,9 @@ watch(viewMode, () => {
 });
 
 watch([activeFilter, selectedDate, selectedMonth], () => {
-    if (viewMode.value === 'accumulated') {
+    if (viewMode.value === 'summary') {
+        fetchSummary();
+    } else if (viewMode.value === 'accumulated') {
         fetchAccumulated();
     }
 });
