@@ -215,22 +215,42 @@ const router = createRouter({
   ],
 })
 
-export default router
-
 router.beforeEach((to, from, next) => {
   document.title = `Bambú Asistente | ${to.meta.title || 'Dashboard'}`;
 
-  const publicPages = ['/', '/error-404', '/checador'];
+  const publicPages = ['/', '/login', '/error-404', '/checador'];
   const authRequired = !publicPages.includes(to.path);
-  const loggedIn = localStorage.getItem('token');
+  const token = localStorage.getItem('token');
+  const userJson = localStorage.getItem('user');
 
-  if (authRequired && !loggedIn) {
+  let userRole = '';
+  if (userJson) {
+    try {
+      const u = JSON.parse(userJson);
+      userRole = u.role || '';
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // 1. Redirigir a login si la ruta requiere auth y no hay token
+  if (authRequired && !token) {
     return next('/');
   }
 
-  if (loggedIn && to.path === '/') {
+  // 2. Si ya hay token activo y navega a / o /login, redirigir al panel
+  if (token && (to.path === '/' || to.path === '/login')) {
     return next('/users');
   }
 
+  // 3. Acceso exclusivo para usuarios con rol Administrador en rutas privadas
+  if (authRequired && userRole && userRole !== 'Administrador') {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return next('/');
+  }
+
   next();
-})
+});
+
+export default router;
