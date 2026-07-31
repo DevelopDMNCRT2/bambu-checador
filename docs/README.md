@@ -138,6 +138,9 @@ npm run dev
   - **Reparación del Botón Confirmar:** Enlazado el evento `@click` en el botón *"✔ Confirmar"* dentro de `ImportXMLModal.vue`, asignando correctamente el `productId` sugerido y activando el flag `confirmed`.
   - **Retroalimentación Visual:** Incorporados estilos dinámicos de confirmación (borde e indicador verde `✓ Coincidencia vinculada` y texto `✓ Confirmado`) al aprobar sugerencias.
   - **Funcionamiento del Botón 'Otro...':** Asegurada la correcta alternancia para descartar la coincidencia y desplegar el selector de productos existentes o creación como nuevo.
+- **Mejoras UX/UI en Selector de Fecha y Encabezado de Nómina (Issue #5):**
+  - **Limpieza de Encabezado:** Se eliminó el subtítulo *"Gestión de horarios y asistencia del personal"* de la vista de Nómina (`NominaView.vue`) dejando la interfaz más limpia y directa.
+  - **Pre-carga Inteligente de Fecha:** Al cambiar el filtro de período al modo **"Día"**, el campo selector de fecha se inicializa pre-cargado automáticamente con la fecha actual (`YYYY-MM-DD` en hora local México) evitando campos vacíos.
 
 ---
 
