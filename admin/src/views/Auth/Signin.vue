@@ -220,14 +220,13 @@ const handleSubmit = async () => {
 
         if (response.ok) {
             const data = await response.json();
+            if (data.user.role !== 'Administrador') {
+                alert('Este panel es exclusivo para Administradores. Los empleados operativos deben registrar su asistencia desde el Checador.');
+                return;
+            }
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
-            // Redirect based on role? Or just root and let router guard handle?
-            if (data.user.role === 'Operativo') {
-                router.push('/orders');
-            } else {
-                router.push('/users');
-            }
+            router.push('/users');
         } else {
             const err = await response.json();
             alert(err.error || 'Autenticación fallida');
