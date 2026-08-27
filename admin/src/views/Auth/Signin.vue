@@ -206,7 +206,7 @@ const handleSubmit = async () => {
     }
 
     try {
-        let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         apiUrl = apiUrl.replace(/\/$/, '');
 
         const response = await fetch(`${apiUrl}/api/auth/login`, {
