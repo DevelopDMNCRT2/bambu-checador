@@ -25,6 +25,7 @@ build/
 # Reportes guardados localmente
 server/cortes/corte_*.json
 server/cortes/last_run.txt
+server/scripts/outputs/
 
 # Logs
 npm-debug.log*
